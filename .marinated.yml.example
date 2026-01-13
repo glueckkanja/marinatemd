@@ -1,0 +1,27 @@
+# MarinateMD Configuration
+#
+# This file configures how marinatemd processes your Terraform/OpenTofu module.
+# You can place this file in the following locations (in priority order):
+#   1. Root of module directory
+#   2. .config/ folder at root of module directory
+#   3. Current directory
+#   4. .config/ folder at current directory
+#   5. $HOME/.marinated.d/
+#
+# All settings can be overridden via CLI flags.
+
+# Path where documentation and YAML schemas are stored
+# Default: docs
+docs_path: docs
+
+# Path to find variables.*.tf files (relative to module root)
+# Default: . (module root)
+variables_path: .
+
+# Path to the README or documentation file to inject markdown into
+# Default: README.md
+readme_path: README.md
+
+# Enable verbose logging
+# Default: false
+verbose: false
