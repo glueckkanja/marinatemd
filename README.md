@@ -1,5 +1,7 @@
 # MarinateMD
 
+<img width="400" height="400" alt="martinate-md-logo" src="https://github.com/user-attachments/assets/4f628219-e026-4624-9d72-544b96d58b50" />
+
 ## 🧊 What's This All About?
 
 Ever tried documenting complex Terraform variables and felt like you're wrestling with a giant blob of HCL? You know the pain: your beautifully structured `object({...})` variables get flattened into unreadable type definitions in terraform-docs, leaving your team scratching their heads about what each nested attribute actually does.
