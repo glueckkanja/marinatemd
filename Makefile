@@ -1,7 +1,9 @@
 SHELL := /bin/bash
 BINARY_NAME := marinatemd
 VERSION ?= dev
-COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
+# Fallback must match the default in cmd/marinatemd/version.go
+COMMIT_FALLBACK := none
+COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "$(COMMIT_FALLBACK)")
 BUILD_DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS := -X github.com/c4a8-azure/marinatemd/cmd/marinatemd.Version=$(VERSION) \
            -X github.com/c4a8-azure/marinatemd/cmd/marinatemd.Commit=$(COMMIT) \

@@ -12,7 +12,7 @@ type Schema struct {
 // Can be a complex object with nested children or a leaf attribute
 type SchemaNode struct {
 	Meta     *MetaInfo              `yaml:"_meta,omitempty"`
-	Children map[string]*SchemaNode `yaml:",inline,omitempty"`
+	Children map[string]*SchemaNode `yaml:"children,omitempty"`
 
 	// Leaf node fields (only populated for leaf attributes)
 	Description string      `yaml:"description,omitempty"`
