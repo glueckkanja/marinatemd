@@ -1,4 +1,4 @@
-package markdown
+package markdown //nolint:testpackage // tests need access to unexported types
 
 import (
 	"fmt"
@@ -7,8 +7,8 @@ import (
 	"github.com/c4a8-azure/marinatemd/internal/schema"
 )
 
-// TestDemo_NetworkRulesExample demonstrates rendering with the default template
-// This test serves as a demonstration of the template system output
+// TestDemo_NetworkRulesExample demonstrates rendering with the default template.
+// This test serves as a demonstration of the template system output.
 func TestDemo_NetworkRulesExample(t *testing.T) {
 	// Create a sample schema matching the network_rules example from the user's file
 	s := &schema.Schema{
@@ -50,7 +50,7 @@ func TestDemo_NetworkRulesExample(t *testing.T) {
 	}
 }
 
-// TestDemo_CustomTemplateExample demonstrates rendering with a custom template
+// TestDemo_CustomTemplateExample demonstrates rendering with a custom template.
 func TestDemo_CustomTemplateExample(t *testing.T) {
 	s := &schema.Schema{
 		Variable: "network_rules",
@@ -71,7 +71,7 @@ func TestDemo_CustomTemplateExample(t *testing.T) {
 		OptionalText:      "✗",
 		EscapeMode:        "bold",
 		IndentStyle:       "bullets",
-		IndentSize:        2,
+		IndentSize:        DefaultIndentSize,
 	}
 
 	r := NewRendererWithTemplate(customCfg)

@@ -39,7 +39,7 @@ func NewRendererWithTemplate(templateCfg *TemplateConfig) *Renderer {
 // RenderSchema converts a schema to hierarchical markdown documentation.
 func (r *Renderer) RenderSchema(s *schema.Schema) (string, error) {
 	if s == nil {
-		return "", fmt.Errorf("schema cannot be nil")
+		return "", errors.New("schema cannot be nil")
 	}
 
 	var builder strings.Builder

@@ -1,15 +1,21 @@
 package markdown
 
 import (
+	"errors"
 	"fmt"
 	"strings"
+)
+
+const (
+	// DefaultIndentSize is the default number of spaces per indent level.
+	DefaultIndentSize = 2
 )
 
 // TemplateConfig defines how markdown is generated from schema fields.
 type TemplateConfig struct {
 	// AttributeTemplate defines the format for rendering individual attributes.
 	// Supports placeholders: {attribute}, {required}, {description}, {type}, {default}, {example}
-	// Default: "`{attribute}` - ({required}) {description}"
+	// Default: "{attribute} - ({required}) {description}"
 	AttributeTemplate string `mapstructure:"attribute_template" yaml:"attribute_template"`
 
 	// RequiredText is the text to display when an attribute is required.
@@ -43,7 +49,7 @@ func DefaultTemplateConfig() *TemplateConfig {
 		OptionalText:      "Optional",
 		EscapeMode:        "inline_code",
 		IndentStyle:       "bullets",
-		IndentSize:        2,
+		IndentSize:        DefaultIndentSize,
 	}
 }
 
@@ -117,7 +123,7 @@ func (tc *TemplateConfig) FormatIndent(depth int) string {
 func (tc *TemplateConfig) Validate() error {
 	// Check for required placeholders in template
 	if !strings.Contains(tc.AttributeTemplate, "{attribute}") {
-		return fmt.Errorf("attribute_template must contain {attribute} placeholder")
+		return errors.New("attribute_template must contain {attribute} placeholder")
 	}
 
 	// Validate escape mode
@@ -142,7 +148,7 @@ func (tc *TemplateConfig) Validate() error {
 
 	// Validate indent size
 	if tc.IndentSize < 0 {
-		return fmt.Errorf("indent_size must be non-negative")
+		return errors.New("indent_size must be non-negative")
 	}
 
 	return nil

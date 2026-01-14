@@ -1,4 +1,4 @@
-package markdown
+package markdown //nolint:testpackage // tests need access to unexported types
 
 import (
 	"strings"
@@ -24,7 +24,7 @@ func TestNewRendererWithTemplate(t *testing.T) {
 		OptionalText:      "Optional",
 		EscapeMode:        "bold",
 		IndentStyle:       "bullets",
-		IndentSize:        2,
+		IndentSize:        DefaultIndentSize,
 	}
 
 	r := NewRendererWithTemplate(customCfg)
@@ -156,7 +156,7 @@ func TestRenderSchema_CustomTemplate(t *testing.T) {
 		OptionalText:      "Optional",
 		EscapeMode:        "bold",
 		IndentStyle:       "bullets",
-		IndentSize:        2,
+		IndentSize:        DefaultIndentSize,
 	}
 
 	r := NewRendererWithTemplate(customCfg)
@@ -264,4 +264,3 @@ func TestInjectIntoFile(t *testing.T) {
 func TestFindMarkers(t *testing.T) {
 	t.Skip("Not implemented yet")
 }
-

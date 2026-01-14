@@ -1,4 +1,4 @@
-package markdown
+package markdown //nolint:testpackage // tests need access to unexported types and constants
 
 import (
 	"strings"
@@ -28,8 +28,8 @@ func TestDefaultTemplateConfig(t *testing.T) {
 		t.Errorf("Expected 'bullets', got: %s", cfg.IndentStyle)
 	}
 
-	if cfg.IndentSize != 2 {
-		t.Errorf("Expected indent size 2, got: %d", cfg.IndentSize)
+	if cfg.IndentSize != DefaultIndentSize {
+		t.Errorf("Expected indent size %d, got: %d", DefaultIndentSize, cfg.IndentSize)
 	}
 }
 
