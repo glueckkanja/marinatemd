@@ -169,7 +169,7 @@ func (i *Injector) InjectIntoFile(filePath string, variableName string, markdown
 	// Parse the file line by line
 	lines := strings.Split(fileContent, "\n")
 	var result strings.Builder
-	inMavinatedBlock := false
+	inMarinatedBlock := false
 	foundBlock := false
 
 	for i := 0; i < len(lines); i++ {
@@ -178,7 +178,7 @@ func (i *Injector) InjectIntoFile(filePath string, variableName string, markdown
 		// Check if this line contains our start marker
 		if strings.Contains(line, foundStartMarker) {
 			foundBlock = true
-			inMavinatedBlock = true
+			inMarinatedBlock = true
 
 			// Extract any prefix (e.g., "Description: ")
 			markerIdx := strings.Index(line, "<!--")
@@ -222,7 +222,7 @@ func (i *Injector) InjectIntoFile(filePath string, variableName string, markdown
 
 				i++
 			}
-		} else if strings.Contains(line, foundEndMarker) && !inMavinatedBlock {
+		} else if strings.Contains(line, foundEndMarker) && !inMarinatedBlock {
 			// Skip orphaned end markers
 			continue
 		} else {
@@ -233,8 +233,8 @@ func (i *Injector) InjectIntoFile(filePath string, variableName string, markdown
 			}
 		}
 
-		if inMavinatedBlock {
-			inMavinatedBlock = false
+		if inMarinatedBlock {
+			inMarinatedBlock = false
 		}
 	}
 
