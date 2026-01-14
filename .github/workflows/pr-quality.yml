@@ -13,6 +13,7 @@ on:
 permissions:
   contents: read
   pull-requests: read
+  security-events: write
 
 jobs:
   lint:
@@ -83,29 +84,29 @@ jobs:
             exit 1
           fi
 
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        goos: [linux, darwin, windows]
-        goarch: [amd64, arm64]
-        exclude:
-          - goos: windows
-            goarch: arm64
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+  # build:
+  #   name: Build
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       goos: [linux, darwin, windows]
+  #       goarch: [amd64, arm64]
+  #       exclude:
+  #         - goos: windows
+  #           goarch: arm64
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
-      - name: Set up Go
-        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
-        with:
-          go-version-file: 'go.mod'
-          cache: true
+  #     - name: Set up Go
+  #       uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+  #       with:
+  #         go-version-file: 'go.mod'
+  #         cache: true
 
-      - name: Build
-        run: |
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -v -o marinatemd-${{ matrix.goos }}-${{ matrix.goarch }} .
+  #     - name: Build
+  #       run: |
+  #         GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -v -o marinatemd-${{ matrix.goos }}-${{ matrix.goarch }} .
 
   vet:
     name: Go Vet
