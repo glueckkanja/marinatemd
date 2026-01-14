@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/c4a8-azure/marinatemd/internal/markdown"
 	"github.com/spf13/viper"
 )
 
@@ -20,6 +21,9 @@ type Config struct {
 
 	// Verbose enables verbose logging
 	Verbose bool `mapstructure:"verbose"`
+
+	// MarkdownTemplate configures how markdown is generated from schema
+	MarkdownTemplate *markdown.TemplateConfig `mapstructure:"markdown_template"`
 }
 
 // Load returns the configuration loaded from viper.
@@ -27,15 +31,23 @@ type Config struct {
 func Load() (*Config, error) {
 	cfg := &Config{
 		// Set defaults
-		DocsPath:      "docs",
-		VariablesPath: ".",
-		ReadmePath:    "README.md",
-		Verbose:       false,
+		DocsPath:         "docs",
+		VariablesPath:    ".",
+		ReadmePath:       "README.md",
+		Verbose:          false,
+		MarkdownTemplate: markdown.DefaultTemplateConfig(),
 	}
 
 	// Unmarshal viper config into struct
 	if err := viper.Unmarshal(cfg); err != nil {
 		return nil, err
+	}
+
+	// Validate markdown template configuration
+	if cfg.MarkdownTemplate != nil {
+		if err := cfg.MarkdownTemplate.Validate(); err != nil {
+			return nil, err
+		}
 	}
 
 	return cfg, nil
@@ -49,4 +61,13 @@ func SetDefaults() {
 	viper.SetDefault("variables_path", ".")
 	viper.SetDefault("readme_path", "README.md")
 	viper.SetDefault("verbose", false)
+
+	// Set markdown template defaults
+	defaultTemplate := markdown.DefaultTemplateConfig()
+	viper.SetDefault("markdown_template.attribute_template", defaultTemplate.AttributeTemplate)
+	viper.SetDefault("markdown_template.required_text", defaultTemplate.RequiredText)
+	viper.SetDefault("markdown_template.optional_text", defaultTemplate.OptionalText)
+	viper.SetDefault("markdown_template.escape_mode", defaultTemplate.EscapeMode)
+	viper.SetDefault("markdown_template.indent_style", defaultTemplate.IndentStyle)
+	viper.SetDefault("markdown_template.indent_size", defaultTemplate.IndentSize)
 }
