@@ -121,6 +121,7 @@ Type: object`,
 				"Description: <!-- MARINATED: app_config -->",
 				"- `database` - (Optional) Database configuration",
 				"- `cache` - (Optional) Cache configuration",
+				"<!-- /MARINATED: app_config -->",
 				"Type: object",
 			},
 			wantErr: false,
@@ -140,6 +141,7 @@ Type: object`,
 			expectedContains: []string{
 				"Description: <!-- MARINATED: app_config -->",
 				"- `new_field` - (Required) New field description",
+				"<!-- /MARINATED: app_config -->",
 				"Type: object",
 			},
 			wantErr: false,
@@ -166,6 +168,7 @@ Type: object`,
 				"<!-- MARINATED: test_var -->",
 				"- `field1` - (Required) A **bold** description",
 				"- `field2` - (Optional) With *italic* text",
+				"<!-- /MARINATED: test_var -->",
 				"Type: object",
 			},
 			wantErr: false,
@@ -182,6 +185,21 @@ Type: object`,
 			expectedContains: []string{
 				"<!-- MARINATED: app\\_config -->",
 				"- `database` - (Required) Database configuration",
+				"<!-- /MARINATED: app\\_config -->",
+				"Type: object",
+			},
+			wantErr: false,
+		},
+		{
+			name:             "re-inject updates existing content (idempotency)",
+			originalContent:  "### app_config\n\nDescription: <!-- MARINATED: app_config -->\n\n- `old_field` - (Required) Old description\n\n<!-- /MARINATED: app_config -->\n\nType: object",
+			variableName:     "app_config",
+			markdownContent:  "- `new_field` - (Required) New description\n- `another_field` - (Optional) Another description",
+			expectedContains: []string{
+				"<!-- MARINATED: app_config -->",
+				"- `new_field` - (Required) New description",
+				"- `another_field` - (Optional) Another description",
+				"<!-- /MARINATED: app_config -->",
 				"Type: object",
 			},
 			wantErr: false,
@@ -230,6 +248,13 @@ Type: object`,
 			markerEscaped := "<!-- MARINATED: " + strings.ReplaceAll(tt.variableName, "_", "\\_") + " -->"
 			if !strings.Contains(resultStr, markerUnescaped) && !strings.Contains(resultStr, markerEscaped) {
 				t.Errorf("InjectIntoFile() removed the marker, but it should be preserved\nLooking for either: %q or %q\nGot: %q", markerUnescaped, markerEscaped, resultStr)
+			}
+			
+			// For the re-injection test, verify old content is gone
+			if tt.name == "re-inject updates existing content (idempotency)" {
+				if strings.Contains(resultStr, "old_field") {
+					t.Errorf("InjectIntoFile() did not remove old content on re-injection\nGot: %q", resultStr)
+				}
 			}
 		})
 	}
@@ -286,6 +311,7 @@ Default: "default"`
 		"### app_config",
 		"<!-- MARINATED: app_config -->",
 		"- `database` - (Required) Database settings",
+		"<!-- /MARINATED: app_config -->",
 		"Type: object",
 		"Default: n/a",
 		"### another_var",

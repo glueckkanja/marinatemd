@@ -17,6 +17,8 @@ Description: <!-- MARINATED: app\_config -->
   - `host` - (Required) # TODO: Add description for host
   - `port` - (Optional) # TODO: Add description for port
   - `ssl_mode` - (Optional) # TODO: Add description for ssl_mode
+
+<!-- /MARINATED: app\_config -->
 Type:
 
 ```hcl

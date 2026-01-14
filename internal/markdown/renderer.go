@@ -133,7 +133,8 @@ func NewInjector() *Injector {
 }
 
 // InjectIntoFile replaces content at MARINATED markers in a documentation file.
-// It looks for <!-- MARINATED: variable_name --> markers and replaces them with the provided markdown content.
+// It looks for <!-- MARINATED: variable_name --> markers and replaces content between
+// the start marker and <!-- /MARINATED: variable_name --> end marker.
 // The file is read, modified, and written back atomically.
 func (i *Injector) InjectIntoFile(filePath string, variableName string, markdownContent string) error {
 	// Read the entire file
@@ -145,30 +146,40 @@ func (i *Injector) InjectIntoFile(filePath string, variableName string, markdown
 	// Convert to string for easier manipulation
 	fileContent := string(content)
 
-	// Build the marker to find - try both with escaped and unescaped underscores
-	marker := fmt.Sprintf("<!-- MARINATED: %s -->", variableName)
-	escapedMarker := fmt.Sprintf("<!-- MARINATED: %s -->", strings.ReplaceAll(variableName, "_", "\\_"))
+	// Build the markers to find - try both with escaped and unescaped underscores
+	startMarker := fmt.Sprintf("<!-- MARINATED: %s -->", variableName)
+	endMarker := fmt.Sprintf("<!-- /MARINATED: %s -->", variableName)
+	
+	escapedStartMarker := fmt.Sprintf("<!-- MARINATED: %s -->", strings.ReplaceAll(variableName, "_", "\\_"))
+	escapedEndMarker := fmt.Sprintf("<!-- /MARINATED: %s -->", strings.ReplaceAll(variableName, "_", "\\_"))
 
-	// Check if either marker exists
-	foundMarker := marker
-	if !strings.Contains(fileContent, marker) {
-		if strings.Contains(fileContent, escapedMarker) {
-			foundMarker = escapedMarker
+	// Check if either marker exists and determine which version we're using
+	foundStartMarker := startMarker
+	foundEndMarker := endMarker
+	
+	if !strings.Contains(fileContent, startMarker) {
+		if strings.Contains(fileContent, escapedStartMarker) {
+			foundStartMarker = escapedStartMarker
+			foundEndMarker = escapedEndMarker
 		} else {
-			return fmt.Errorf("marker %s not found in file", marker)
+			return fmt.Errorf("marker %s not found in file", startMarker)
 		}
 	}
 
-	// Use a more sophisticated approach: find the marker and replace just the marker line
-	// while preserving everything else
+	// Parse the file line by line
 	lines := strings.Split(fileContent, "\n")
 	var result strings.Builder
+	inMavinatedBlock := false
+	foundBlock := false
 
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
 
-		// Check if this line contains our marker
-		if strings.Contains(line, foundMarker) {
+		// Check if this line contains our start marker
+		if strings.Contains(line, foundStartMarker) {
+			foundBlock = true
+			inMavinatedBlock = true
+			
 			// Extract any prefix (e.g., "Description: ")
 			markerIdx := strings.Index(line, "<!--")
 			prefix := ""
@@ -176,48 +187,59 @@ func (i *Injector) InjectIntoFile(filePath string, variableName string, markdown
 				prefix = line[:markerIdx]
 			}
 
-			// Write the prefix and marker on the same line, then content on new lines
+			// Write the start marker line
 			result.WriteString(prefix)
-			result.WriteString(foundMarker)
+			result.WriteString(foundStartMarker)
 			result.WriteString("\n\n")
+			
+			// Write the content with proper spacing
 			result.WriteString(strings.TrimSpace(markdownContent))
-
-			// Skip any existing content that was previously injected
-			// Look ahead to find where the next section starts (e.g., "Type:", "Default:", or next "###")
+			result.WriteString("\n\n")
+			
+			// Write the end marker
+			result.WriteString(foundEndMarker)
+			result.WriteString("\n")
+			
+			// Skip everything until we find the end marker or a significant section
 			i++
 			for i < len(lines) {
-				nextLine := strings.TrimSpace(lines[i])
+				currentLine := lines[i]
+				
+				// If we find an existing end marker, skip it and continue
+				if strings.Contains(currentLine, foundEndMarker) {
+					break
+				}
+				
+				nextLine := strings.TrimSpace(currentLine)
 				// Stop when we hit the next significant markdown section
 				if strings.HasPrefix(nextLine, "Type:") ||
 					strings.HasPrefix(nextLine, "Default:") ||
 					strings.HasPrefix(nextLine, "###") ||
-					strings.HasPrefix(nextLine, "##") ||
-					strings.HasPrefix(nextLine, "<!--") {
+					strings.HasPrefix(nextLine, "##") {
 					i-- // Back up so we don't skip this line
 					break
 				}
-				// Skip lines that are part of the old injected content
-				if nextLine == "" {
-					// Keep one blank line for spacing
-					if i+1 < len(lines) {
-						next := strings.TrimSpace(lines[i+1])
-						if strings.HasPrefix(next, "Type:") ||
-							strings.HasPrefix(next, "Default:") ||
-							strings.HasPrefix(next, "###") {
-							break
-						}
-					}
-				}
+				
 				i++
 			}
+		} else if strings.Contains(line, foundEndMarker) && !inMavinatedBlock {
+			// Skip orphaned end markers
+			continue
 		} else {
+			// Write non-marinated content as-is
 			result.WriteString(line)
+			if i < len(lines)-1 {
+				result.WriteString("\n")
+			}
 		}
+		
+		if inMavinatedBlock {
+			inMavinatedBlock = false
+		}
+	}
 
-		// Add newline except for the last line
-		if i < len(lines)-1 {
-			result.WriteString("\n")
-		}
+	if !foundBlock {
+		return fmt.Errorf("marker %s not found in file", startMarker)
 	}
 
 	// Write the modified content back to the file
