@@ -1,10 +1,12 @@
-package markdown
+package markdown_test
 
 import (
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/c4a8-azure/marinatemd/internal/markdown"
 )
 
 func TestInjector_FindMarkers(t *testing.T) {
@@ -48,20 +50,20 @@ This file has no MARINATED markers.`,
 			wantErr:  false,
 		},
 		{
-			name: "marker with spaces",
-			content: `Description: <!-- MARINATED:  app_config  -->`,
+			name:     "marker with spaces",
+			content:  `Description: <!-- MARINATED:  app_config  -->`,
 			expected: []string{"app_config"},
 			wantErr:  false,
 		},
 		{
-			name: "marker with underscore in name",
-			content: `Description: <!-- MARINATED: my_complex_variable_name -->`,
+			name:     "marker with underscore in name",
+			content:  `Description: <!-- MARINATED: my_complex_variable_name -->`,
 			expected: []string{"my_complex_variable_name"},
 			wantErr:  false,
 		},
 		{
-			name: "marker with escaped underscore in markdown",
-			content: `Description: <!-- MARINATED: app\_config -->`,
+			name:     "marker with escaped underscore in markdown",
+			content:  `Description: <!-- MARINATED: app\_config -->`,
 			expected: []string{"app_config"},
 			wantErr:  false,
 		},
@@ -77,7 +79,7 @@ This file has no MARINATED markers.`,
 			}
 
 			// Test FindMarkers
-			injector := NewInjector()
+			injector := markdown.NewInjector()
 			got, err := injector.FindMarkers(tmpFile)
 
 			if (err != nil) != tt.wantErr {
@@ -100,14 +102,26 @@ This file has no MARINATED markers.`,
 }
 
 func TestInjector_InjectIntoFile(t *testing.T) {
-	tests := []struct {
-		name             string
-		originalContent  string
-		variableName     string
-		markdownContent  string
-		expectedContains []string
-		wantErr          bool
-	}{
+	tests := getInjectIntoFileTests()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runInjectIntoFileTest(t, tt)
+		})
+	}
+}
+
+type injectIntoFileTest struct {
+	name             string
+	originalContent  string
+	variableName     string
+	markdownContent  string
+	expectedContains []string
+	wantErr          bool
+}
+
+func getInjectIntoFileTests() []injectIntoFileTest {
+	return []injectIntoFileTest{
 		{
 			name: "inject after marker preserving prefix",
 			originalContent: `### app_config
@@ -191,10 +205,10 @@ Type: object`,
 			wantErr: false,
 		},
 		{
-			name:             "re-inject updates existing content (idempotency)",
-			originalContent:  "### app_config\n\nDescription: <!-- MARINATED: app_config -->\n\n- `old_field` - (Required) Old description\n\n<!-- /MARINATED: app_config -->\n\nType: object",
-			variableName:     "app_config",
-			markdownContent:  "- `new_field` - (Required) New description\n- `another_field` - (Optional) Another description",
+			name:            "re-inject updates existing content (idempotency)",
+			originalContent: "### app_config\n\nDescription: <!-- MARINATED: app_config -->\n\n- `old_field` - (Required) Old description\n\n<!-- /MARINATED: app_config -->\n\nType: object",
+			variableName:    "app_config",
+			markdownContent: "- `new_field` - (Required) New description\n- `another_field` - (Optional) Another description",
 			expectedContains: []string{
 				"<!-- MARINATED: app_config -->",
 				"- `new_field` - (Required) New description",
@@ -205,58 +219,66 @@ Type: object`,
 			wantErr: false,
 		},
 	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create temporary file
-			tmpDir := t.TempDir()
-			tmpFile := filepath.Join(tmpDir, "test.md")
-			if err := os.WriteFile(tmpFile, []byte(tt.originalContent), 0644); err != nil {
-				t.Fatalf("Failed to create temp file: %v", err)
-			}
+func runInjectIntoFileTest(t *testing.T, tt injectIntoFileTest) {
+	// Create temporary file
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "test.md")
+	if err := os.WriteFile(tmpFile, []byte(tt.originalContent), 0644); err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
 
-			// Test InjectIntoFile
-			injector := NewInjector()
-			err := injector.InjectIntoFile(tmpFile, tt.variableName, tt.markdownContent)
+	// Test InjectIntoFile
+	injector := markdown.NewInjector()
+	err := injector.InjectIntoFile(tmpFile, tt.variableName, tt.markdownContent)
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("InjectIntoFile() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+	if (err != nil) != tt.wantErr {
+		t.Errorf("InjectIntoFile() error = %v, wantErr %v", err, tt.wantErr)
+		return
+	}
 
-			if tt.wantErr {
-				return // If we expected an error, we're done
-			}
+	if tt.wantErr {
+		return // If we expected an error, we're done
+	}
 
-			// Read the file back and verify content
-			resultContent, err := os.ReadFile(tmpFile)
-			if err != nil {
-				t.Fatalf("Failed to read result file: %v", err)
-			}
+	// Read the file back and verify content
+	resultContent, err := os.ReadFile(tmpFile)
+	if err != nil {
+		t.Fatalf("Failed to read result file: %v", err)
+	}
 
-			resultStr := string(resultContent)
+	resultStr := string(resultContent)
+	verifyInjectResult(t, tt, resultStr)
+}
 
-			// Check that all expected strings are present
-			for _, expected := range tt.expectedContains {
-				if !strings.Contains(resultStr, expected) {
-					t.Errorf("InjectIntoFile() result does not contain expected string:\nExpected: %q\nGot: %q", expected, resultStr)
-				}
-			}
+func verifyInjectResult(t *testing.T, tt injectIntoFileTest, resultStr string) {
+	// Check that all expected strings are present
+	for _, expected := range tt.expectedContains {
+		if !strings.Contains(resultStr, expected) {
+			t.Errorf(
+				"InjectIntoFile() result does not contain expected string:\nExpected: %q\nGot: %q",
+				expected, resultStr)
+		}
+	}
 
-			// Verify some form of the marker is still present (either escaped or unescaped)
-			markerUnescaped := "<!-- MARINATED: " + tt.variableName + " -->"
-			markerEscaped := "<!-- MARINATED: " + strings.ReplaceAll(tt.variableName, "_", "\\_") + " -->"
-			if !strings.Contains(resultStr, markerUnescaped) && !strings.Contains(resultStr, markerEscaped) {
-				t.Errorf("InjectIntoFile() removed the marker, but it should be preserved\nLooking for either: %q or %q\nGot: %q", markerUnescaped, markerEscaped, resultStr)
-			}
+	// Verify some form of the marker is still present (either escaped or unescaped)
+	markerUnescaped := "<!-- MARINATED: " + tt.variableName + " -->"
+	markerEscaped := "<!-- MARINATED: " + strings.ReplaceAll(tt.variableName, "_", "\\_") + " -->"
+	hasUnescaped := strings.Contains(resultStr, markerUnescaped)
+	hasEscaped := strings.Contains(resultStr, markerEscaped)
+	if !hasUnescaped && !hasEscaped {
+		t.Errorf(
+			"InjectIntoFile() removed the marker, but it should be preserved\n"+
+				"Looking for either: %q or %q\nGot: %q",
+			markerUnescaped, markerEscaped, resultStr)
+	}
 
-			// For the re-injection test, verify old content is gone
-			if tt.name == "re-inject updates existing content (idempotency)" {
-				if strings.Contains(resultStr, "old_field") {
-					t.Errorf("InjectIntoFile() did not remove old content on re-injection\nGot: %q", resultStr)
-				}
-			}
-		})
+	// For the re-injection test, verify old content is gone
+	if tt.name == "re-inject updates existing content (idempotency)" {
+		if strings.Contains(resultStr, "old_field") {
+			t.Errorf("InjectIntoFile() did not remove old content on re-injection\nGot: %q", resultStr)
+		}
 	}
 }
 
@@ -291,7 +313,7 @@ Default: "default"`
 	}
 
 	// Inject markdown
-	injector := NewInjector()
+	injector := markdown.NewInjector()
 	if err := injector.InjectIntoFile(tmpFile, "app_config", expectedMarkdown); err != nil {
 		t.Fatalf("InjectIntoFile() failed: %v", err)
 	}

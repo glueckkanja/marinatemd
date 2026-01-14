@@ -175,57 +175,15 @@ func (i *Injector) InjectIntoFile(filePath string, variableName string, markdown
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
 
-		// Check if this line contains our start marker
-		if strings.Contains(line, foundStartMarker) {
+		switch {
+		case strings.Contains(line, foundStartMarker):
 			foundBlock = true
 			inMarinatedBlock = true
-
-			// Extract any prefix (e.g., "Description: ")
-			markerIdx := strings.Index(line, "<!--")
-			prefix := ""
-			if markerIdx > 0 {
-				prefix = line[:markerIdx]
-			}
-
-			// Write the start marker line
-			result.WriteString(prefix)
-			result.WriteString(foundStartMarker)
-			result.WriteString("\n\n")
-
-			// Write the content with proper spacing
-			result.WriteString(strings.TrimSpace(markdownContent))
-			result.WriteString("\n\n")
-
-			// Write the end marker
-			result.WriteString(foundEndMarker)
-			result.WriteString("\n")
-
-			// Skip everything until we find the end marker or a significant section
-			i++
-			for i < len(lines) {
-				currentLine := lines[i]
-
-				// If we find an existing end marker, skip it and continue
-				if strings.Contains(currentLine, foundEndMarker) {
-					break
-				}
-
-				nextLine := strings.TrimSpace(currentLine)
-				// Stop when we hit the next significant markdown section
-				if strings.HasPrefix(nextLine, "Type:") ||
-					strings.HasPrefix(nextLine, "Default:") ||
-					strings.HasPrefix(nextLine, "###") ||
-					strings.HasPrefix(nextLine, "##") {
-					i-- // Back up so we don't skip this line
-					break
-				}
-
-				i++
-			}
-		} else if strings.Contains(line, foundEndMarker) && !inMarinatedBlock {
+			i = writeMarinatedBlock(line, foundStartMarker, foundEndMarker, markdownContent, lines, i, &result)
+		case strings.Contains(line, foundEndMarker) && !inMarinatedBlock:
 			// Skip orphaned end markers
 			continue
-		} else {
+		default:
 			// Write non-marinated content as-is
 			result.WriteString(line)
 			if i < len(lines)-1 {
@@ -243,11 +201,58 @@ func (i *Injector) InjectIntoFile(filePath string, variableName string, markdown
 	}
 
 	// Write the modified content back to the file
-	if err := os.WriteFile(filePath, []byte(result.String()), 0644); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
+	if writeErr := os.WriteFile(filePath, []byte(result.String()), 0600); writeErr != nil {
+		return fmt.Errorf("failed to write file: %w", writeErr)
 	}
 
 	return nil
+}
+
+func writeMarinatedBlock(
+	line, foundStartMarker, foundEndMarker, markdownContent string,
+	lines []string,
+	idx int,
+	result *strings.Builder,
+) int {
+	// Extract any prefix (e.g., "Description: ")
+	prefix, _, _ := strings.Cut(line, "<!--")
+
+	// Write the start marker line
+	result.WriteString(prefix)
+	result.WriteString(foundStartMarker)
+	result.WriteString("\n\n")
+
+	// Write the content with proper spacing
+	result.WriteString(strings.TrimSpace(markdownContent))
+	result.WriteString("\n\n")
+
+	// Write the end marker
+	result.WriteString(foundEndMarker)
+	result.WriteString("\n")
+
+	// Skip everything until we find the end marker or a significant section
+	idx++
+	for idx < len(lines) {
+		currentLine := lines[idx]
+
+		// If we find an existing end marker, skip it and continue
+		if strings.Contains(currentLine, foundEndMarker) {
+			break
+		}
+
+		nextLine := strings.TrimSpace(currentLine)
+		// Stop when we hit the next significant markdown section
+		if strings.HasPrefix(nextLine, "Type:") ||
+			strings.HasPrefix(nextLine, "Default:") ||
+			strings.HasPrefix(nextLine, "###") ||
+			strings.HasPrefix(nextLine, "##") {
+			idx-- // Back up so we don't skip this line
+			break
+		}
+
+		idx++
+	}
+	return idx
 }
 
 // FindMarkers scans a file and returns all MARINATED markers found.
@@ -261,24 +266,23 @@ func (i *Injector) FindMarkers(filePath string) ([]string, error) {
 
 	// Find all MARINATED markers using a simple string search
 	var markers []string
-	lines := strings.Split(string(content), "\n")
 
-	for _, line := range lines {
+	for line := range strings.SplitSeq(string(content), "\n") {
 		// Look for <!-- MARINATED: variable_name -->
 		if strings.Contains(line, "<!-- MARINATED:") {
 			// Extract the variable name
-			start := strings.Index(line, "<!-- MARINATED:")
-			if start == -1 {
+			before, after, found := strings.Cut(line, "<!-- MARINATED:")
+			if !found {
+				continue
+			}
+			_ = before // Unused
+
+			variableWithEnd, _, found := strings.Cut(after, "-->")
+			if !found {
 				continue
 			}
 
-			remaining := line[start+len("<!-- MARINATED:"):]
-			end := strings.Index(remaining, "-->")
-			if end == -1 {
-				continue
-			}
-
-			variableName := strings.TrimSpace(remaining[:end])
+			variableName := strings.TrimSpace(variableWithEnd)
 			// Handle escaped underscores in markdown (e.g., app\_config -> app_config)
 			variableName = strings.ReplaceAll(variableName, "\\_", "_")
 			if variableName != "" {
