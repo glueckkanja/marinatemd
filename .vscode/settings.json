@@ -1,0 +1,74 @@
+{
+  // Editor settings aligned with .editorconfig
+  "files.encoding": "utf8",
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+
+  // Go-specific settings
+  "[go]": {
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4,
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+
+  // YAML settings
+  "[yaml]": {
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2,
+    "editor.formatOnSave": true
+  },
+
+  // JSON settings
+  "[json]": {
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2,
+    "editor.formatOnSave": true
+  },
+
+  // Markdown settings
+  "[markdown]": {
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2,
+    "files.trimTrailingWhitespace": false,
+    "editor.formatOnSave": false
+  },
+
+  // Makefile settings
+  "[makefile]": {
+    "editor.insertSpaces": false,
+    "editor.detectIndentation": false
+  },
+
+  // Shell script settings
+  "[shellscript]": {
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2,
+    "editor.formatOnSave": true
+  },
+
+  // Terraform/HCL settings
+  "[terraform]": {
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2,
+    "editor.formatOnSave": true
+  },
+
+  // Go tools configuration
+  "go.useLanguageServer": true,
+  "go.lintTool": "golangci-lint",
+  "go.lintOnSave": "workspace",
+  "go.lintFlags": ["--timeout=5m"],
+  "go.formatTool": "goimports",
+  "go.testFlags": ["-v", "-race"],
+  "go.coverOnSave": false,
+
+  // File associations
+  "files.associations": {
+    "*.tf": "terraform",
+    "*.hcl": "terraform"
+  }
+}
