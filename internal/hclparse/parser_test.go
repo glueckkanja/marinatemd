@@ -1,4 +1,4 @@
-package hclparse
+package hclparse_test
 
 import "testing"
 

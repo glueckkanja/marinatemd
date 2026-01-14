@@ -1,4 +1,4 @@
-package yamlio
+package yamlio_test
 
 import "testing"
 

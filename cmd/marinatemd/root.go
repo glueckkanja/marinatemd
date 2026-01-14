@@ -14,7 +14,7 @@ var (
 	moduleRoot string
 )
 
-// rootCmd represents the base command when called without any subcommands
+// rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
 	Use:   "marinatemd [module-path]",
 	Short: "Generate structured documentation for complex Terraform/OpenTofu variables",
@@ -27,7 +27,7 @@ Example:
   marinatemd /path/to/terraform/module
   marinatemd --config .marinated.yml .`,
 	Args: cobra.MaximumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, args []string) error {
 		// Determine module root
 		root := "."
 		if len(args) > 0 {
@@ -69,7 +69,13 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	// Persistent flags (available to all subcommands)
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default searches for .marinated.yml in multiple locations)")
+	rootCmd.PersistentFlags().StringVarP(
+		&cfgFile,
+		"config",
+		"c",
+		"",
+		"config file (default searches for .marinated.yml in multiple locations)",
+	)
 
 	// Local flags (only for root command)
 	rootCmd.Flags().StringVar(&moduleRoot, "module-root", ".", "root directory of the Terraform/OpenTofu module")
@@ -116,8 +122,6 @@ func initConfig() {
 	viper.AutomaticEnv()
 
 	// If a config file is found, read it in
-	if err := viper.ReadInConfig(); err == nil {
-		// Config file found and successfully parsed
-		// Silently continue - we'll show config file used in verbose mode
-	}
+	// Try to read the config file (ignore errors silently).
+	_ = viper.ReadInConfig()
 }

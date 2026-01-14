@@ -1,4 +1,4 @@
-package markdown
+package markdown_test
 
 import "testing"
 
