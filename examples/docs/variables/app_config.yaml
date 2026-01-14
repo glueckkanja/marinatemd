@@ -1,0 +1,28 @@
+variable: app_config
+version: "1"
+schema:
+    cache:
+        _meta:
+            description: '# TODO: Add description for cache'
+        type: object
+        redis_url:
+            type: string
+            required: true
+            description: '# TODO: Add description for redis_url'
+        ttl:
+            type: number
+            description: '# TODO: Add description for ttl'
+    database:
+        _meta:
+            description: '# TODO: Add description for database'
+        type: object
+        host:
+            type: string
+            required: true
+            description: '# TODO: Add description for host'
+        port:
+            type: number
+            description: '# TODO: Add description for port'
+        ssl_mode:
+            type: string
+            description: '# TODO: Add description for ssl_mode'
