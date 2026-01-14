@@ -249,7 +249,7 @@ Type: object`,
 			if !strings.Contains(resultStr, markerUnescaped) && !strings.Contains(resultStr, markerEscaped) {
 				t.Errorf("InjectIntoFile() removed the marker, but it should be preserved\nLooking for either: %q or %q\nGot: %q", markerUnescaped, markerEscaped, resultStr)
 			}
-			
+
 			// For the re-injection test, verify old content is gone
 			if tt.name == "re-inject updates existing content (idempotency)" {
 				if strings.Contains(resultStr, "old_field") {

@@ -149,14 +149,14 @@ func (i *Injector) InjectIntoFile(filePath string, variableName string, markdown
 	// Build the markers to find - try both with escaped and unescaped underscores
 	startMarker := fmt.Sprintf("<!-- MARINATED: %s -->", variableName)
 	endMarker := fmt.Sprintf("<!-- /MARINATED: %s -->", variableName)
-	
+
 	escapedStartMarker := fmt.Sprintf("<!-- MARINATED: %s -->", strings.ReplaceAll(variableName, "_", "\\_"))
 	escapedEndMarker := fmt.Sprintf("<!-- /MARINATED: %s -->", strings.ReplaceAll(variableName, "_", "\\_"))
 
 	// Check if either marker exists and determine which version we're using
 	foundStartMarker := startMarker
 	foundEndMarker := endMarker
-	
+
 	if !strings.Contains(fileContent, startMarker) {
 		if strings.Contains(fileContent, escapedStartMarker) {
 			foundStartMarker = escapedStartMarker
@@ -179,7 +179,7 @@ func (i *Injector) InjectIntoFile(filePath string, variableName string, markdown
 		if strings.Contains(line, foundStartMarker) {
 			foundBlock = true
 			inMavinatedBlock = true
-			
+
 			// Extract any prefix (e.g., "Description: ")
 			markerIdx := strings.Index(line, "<!--")
 			prefix := ""
@@ -191,25 +191,25 @@ func (i *Injector) InjectIntoFile(filePath string, variableName string, markdown
 			result.WriteString(prefix)
 			result.WriteString(foundStartMarker)
 			result.WriteString("\n\n")
-			
+
 			// Write the content with proper spacing
 			result.WriteString(strings.TrimSpace(markdownContent))
 			result.WriteString("\n\n")
-			
+
 			// Write the end marker
 			result.WriteString(foundEndMarker)
 			result.WriteString("\n")
-			
+
 			// Skip everything until we find the end marker or a significant section
 			i++
 			for i < len(lines) {
 				currentLine := lines[i]
-				
+
 				// If we find an existing end marker, skip it and continue
 				if strings.Contains(currentLine, foundEndMarker) {
 					break
 				}
-				
+
 				nextLine := strings.TrimSpace(currentLine)
 				// Stop when we hit the next significant markdown section
 				if strings.HasPrefix(nextLine, "Type:") ||
@@ -219,7 +219,7 @@ func (i *Injector) InjectIntoFile(filePath string, variableName string, markdown
 					i-- // Back up so we don't skip this line
 					break
 				}
-				
+
 				i++
 			}
 		} else if strings.Contains(line, foundEndMarker) && !inMavinatedBlock {
@@ -232,7 +232,7 @@ func (i *Injector) InjectIntoFile(filePath string, variableName string, markdown
 				result.WriteString("\n")
 			}
 		}
-		
+
 		if inMavinatedBlock {
 			inMavinatedBlock = false
 		}
