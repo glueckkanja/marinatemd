@@ -7,6 +7,7 @@ import (
 
 	"github.com/c4a8-azure/marinatemd/internal/config"
 	"github.com/c4a8-azure/marinatemd/internal/hclparse"
+	"github.com/c4a8-azure/marinatemd/internal/markdown"
 	"github.com/c4a8-azure/marinatemd/internal/schema"
 	"github.com/c4a8-azure/marinatemd/internal/yamlio"
 	"github.com/spf13/cobra"
@@ -133,12 +134,68 @@ Example:
 			fmt.Printf("    Written to %s\n", yamlPath)
 		}
 
+		// Step 5: Find README.md or configured documentation file
+		readmePath := filepath.Join(docsPath, "README.md")
+		if _, err := os.Stat(readmePath); err != nil {
+			fmt.Printf("\nWARNING: README.md not found at %s\n", readmePath)
+			fmt.Printf("         Skipping markdown injection step\n")
+		} else {
+			// Step 6: Inject rendered markdown into README.md
+			fmt.Printf("\nInjecting markdown into documentation...\n")
+			renderer := markdown.NewRenderer()
+			injector := markdown.NewInjector()
+
+			// Find all markers in the README
+			markers, findErr := injector.FindMarkers(readmePath)
+			if findErr != nil {
+				return fmt.Errorf("failed to find markers in README: %w", findErr)
+			}
+
+			if len(markers) == 0 {
+				fmt.Printf("   No MARINATED markers found in %s\n", readmePath)
+			} else {
+				fmt.Printf("   Found %d marker(s) in README.md\n", len(markers))
+
+				// Process each marker
+				for _, markerID := range markers {
+					fmt.Printf("   Injecting documentation for '%s'...\n", markerID)
+
+					// Read the schema from YAML
+					schema, readErr := reader.ReadSchema(markerID)
+					if readErr != nil {
+						fmt.Printf("      WARNING: Could not read schema for %s: %v\n", markerID, readErr)
+						continue
+					}
+
+					if schema == nil {
+						fmt.Printf("      WARNING: No schema found for %s\n", markerID)
+						continue
+					}
+
+					// Render markdown from schema
+					renderedMarkdown, renderErr := renderer.RenderSchema(schema)
+					if renderErr != nil {
+						fmt.Printf("      WARNING: Could not render markdown for %s: %v\n", markerID, renderErr)
+						continue
+					}
+
+					// Inject into README
+					if injectErr := injector.InjectIntoFile(readmePath, markerID, renderedMarkdown); injectErr != nil {
+						fmt.Printf("      WARNING: Could not inject markdown for %s: %v\n", markerID, injectErr)
+						continue
+					}
+
+					fmt.Printf("      ✓ Injected successfully\n")
+				}
+			}
+		}
+
 		// Success summary
 		fmt.Printf("\nSuccessfully processed %d variable(s)\n", len(marinatedVars))
 		fmt.Printf("   YAML schemas written to: %s\n", variablesDir)
 		fmt.Println("\nNext steps:")
 		fmt.Println("   1. Review and edit the generated YAML files to add descriptions")
-		fmt.Println("   2. Run marinatemd again to regenerate markdown (when implemented)")
+		fmt.Println("   2. Run marinatemd again to regenerate markdown")
 
 		return nil
 	},
