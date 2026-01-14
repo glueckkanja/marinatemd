@@ -1,0 +1,225 @@
+# golangci-lint configuration
+# Documentation: https://golangci-lint.run/usage/configuration/
+version: "2"
+
+run:
+  # Timeout for analysis
+  timeout: 5m
+
+  # Include test files
+  tests: true
+
+  # Exit code when at least one issue was found
+  issues-exit-code: 1
+
+  # Modules download mode
+  modules-download-mode: readonly
+
+  # Allow multiple parallel golangci-lint instances
+  allow-parallel-runners: true
+
+output:
+  # Format: colored-line-number|line-number|json|tab|checkstyle|code-climate|html|junit-xml|github-actions
+
+  formats:
+
+    text:
+      # Print lines of code with issue
+      print-issued-lines: true
+
+      # Print linter name in the end of issue text
+      print-linter-name: true
+
+
+linters:
+  # Disable all linters by default
+  default: none
+
+  # Enable specific linters
+  enable:
+    # Bugs & correctness
+    - errcheck        # Check for unchecked errors
+    - gosimple        # Simplify code
+    - govet           # Reports suspicious constructs
+    - ineffassign     # Detect ineffectual assignments
+    - staticcheck     # Go static analysis
+    - typecheck       # Type-check Go code
+    - unused          # Check for unused constants, variables, functions and types
+
+    # Style & formatting
+    - gofmt           # Check whether code was gofmt-ed
+    - goimports       # Check import statements are formatted
+    - misspell        # Finds commonly misspelled English words
+    - whitespace      # Check for unnecessary newlines
+
+    # Complexity & maintainability
+    - gocyclo         # Computes cyclomatic complexity
+    - gocognit        # Computes cognitive complexity
+    - funlen          # Check function length
+
+    # Performance
+    - prealloc        # Find slice declarations that could potentially be preallocated
+
+    # Best practices
+    - errname         # Check error naming
+    - errorlint       # Find code that will cause problems with Go 1.13+ error wrapping
+    - goprintffuncname # Check that printf-like functions are named with f at the end
+    - nolintlint      # Reports ill-formed or insufficient nolint directives
+
+    # Security
+    - gosec           # Security problems
+
+    # Code quality
+    - dupl            # Code clone detection
+    - goconst         # Find repeated strings that could be replaced by a constant
+    - gocritic        # Provides diagnostics that check for bugs, performance and style issues
+    - revive          # Fast, configurable, extensible, flexible, and beautiful linter
+
+    # Comments & documentation
+    - godot           # Check if comments end in a period
+
+    # Unused code
+    - unparam         # Reports unused function parameters
+
+  settings:
+    errcheck:
+      # Report about not checking of errors in type assertions: `a := b.(MyStruct)`
+      check-type-assertions: true
+
+      # Report about assignment of errors to blank identifier
+      check-blank: true
+
+    govet:
+      # Enable all analyzers
+      enable-all: true
+
+      # Disable specific analyzers
+      disable:
+        - shadow  # Too many false positives
+
+    gocyclo:
+      # Minimal cyclomatic complexity to report
+      min-complexity: 15
+
+    gocognit:
+      # Minimal cognitive complexity to report
+      min-complexity: 20
+
+    funlen:
+      # Maximum function length
+      lines: 100
+      statements: 50
+
+    dupl:
+      # Tokens count to trigger issue
+      threshold: 150
+
+    goconst:
+      # Minimal length of string constant
+      min-len: 3
+
+      # Minimum occurrences to trigger
+      min-occurrences: 3
+
+    misspell:
+      # Correct spellings using locale preferences
+      locale: US
+
+    unused:
+      # Mark all function parameters as used
+      exported-fields-are-used: false
+
+    unparam:
+      # Check exported functions
+      check-exported: false
+
+    gosec:
+      # Select which gosec rules to run
+      includes:
+        - G101 # Look for hardcoded credentials
+        - G102 # Bind to all interfaces
+        - G103 # Audit the use of unsafe block
+        - G104 # Audit errors not checked
+        - G106 # Audit the use of ssh.InsecureIgnoreHostKey
+        - G107 # Url provided to HTTP request as taint input
+        - G108 # Profiling endpoint automatically exposed on /debug/pprof
+        - G109 # Potential Integer overflow made by strconv.Atoi result conversion
+        - G110 # Potential DoS vulnerability via decompression bomb
+        - G201 # SQL query construction using format string
+        - G202 # SQL query construction using string concatenation
+        - G203 # Use of unescaped data in HTML templates
+        - G204 # Audit use of command execution
+        - G301 # Poor file permissions used when creating a directory
+        - G302 # Poor file permissions used with chmod
+        - G303 # Creating tempfile using a predictable path
+        - G304 # File path provided as taint input
+        - G305 # File traversal when extracting zip/tar archive
+        - G306 # Poor file permissions used when writing to a new file
+        - G307 # Deferring a method which returns an error
+        - G401 # Detect the usage of DES, RC4, MD5 or SHA1
+        - G402 # Look for bad TLS connection settings
+        - G403 # Ensure minimum RSA key length of 2048 bits
+        - G404 # Insecure random number source (rand)
+        - G501 # Import blocklist: crypto/md5
+        - G502 # Import blocklist: crypto/des
+        - G503 # Import blocklist: crypto/rc4
+        - G504 # Import blocklist: net/http/cgi
+        - G505 # Import blocklist: crypto/sha1
+        - G601 # Implicit memory aliasing of items from a range statement
+
+    revive:
+      # Enable all available rules
+      enable-all-rules: false
+
+      # Specific rules to enable
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+        - name: increment-decrement
+        - name: var-naming
+        - name: var-declaration
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unused-parameter
+        - name: unreachable-code
+        - name: redefines-builtin-id
+
+    gocritic:
+      # Enable multiple checks by tags
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+        - experimental
+        - opinionated
+
+      disabled-checks:
+        - whyNoLint  # Requires explanation for nolint directives
+        - hugeParam  # Too strict for this project
+
+issues:
+  # Maximum issues count per one linter
+  max-issues-per-linter: 0
+
+  # Maximum count of issues with the same text
+  max-same-issues: 0
+
+  # Show only new issues
+  new: false
+
+  # Fix found issues (if it's supported by the linter)
+  fix: false
+

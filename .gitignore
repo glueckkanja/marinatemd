@@ -7,6 +7,7 @@
 *.dll
 *.so
 *.dylib
+marinatemd
 
 # Test binary, built with `go test -c`
 *.test
@@ -16,9 +17,11 @@
 coverage.*
 *.coverprofile
 profile.cov
+coverage.txt
+coverage.html
 
 # Dependency directories (remove the comment below to include it)
-# vendor/
+vendor/
 
 # Go workspace file
 go.work
@@ -26,7 +29,46 @@ go.work.sum
 
 # env file
 .env
+.env.local
+.env.*.local
 
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build artifacts
+dist/
+build/
+bin/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# GoReleaser
+.goreleaser.yaml.bak
+
+# Debug files
+debug
+__debug_bin
+
+# OS specific
+Thumbs.db
+.directory
+
+# Documentation build
+docs/_build/
+site/
+
+# Testing
+*.cover
+*.prof
+
+# Local configuration
+*.local.yaml
+*.local.yml
