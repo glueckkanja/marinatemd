@@ -43,7 +43,6 @@ linters:
     - govet           # Reports suspicious constructs
     - ineffassign     # Detect ineffectual assignments
     - staticcheck     # Go static analysis
-    - typecheck       # Type-check Go code
     - unused          # Check for unused constants, variables, functions and types
 
     # Style & formatting
