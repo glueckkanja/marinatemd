@@ -1,3 +1,4 @@
+//nolint:cyclop // Integration test intentionally has higher complexity
 package internal_test
 
 import (

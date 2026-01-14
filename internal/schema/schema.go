@@ -75,7 +75,7 @@ func (b *Builder) parseType(typeExpr string, nodes map[string]*Node, contextName
 
 	// Check for object type
 	if strings.HasPrefix(typeExpr, "object(") {
-		return b.parseObjectType(typeExpr, nodes, contextName)
+		return b.parseObjectType(typeExpr, nodes)
 	}
 
 	// Check for optional wrapper
@@ -104,7 +104,7 @@ func (b *Builder) parseType(typeExpr string, nodes map[string]*Node, contextName
 }
 
 // parseObjectType parses an object type expression.
-func (b *Builder) parseObjectType(typeExpr string, nodes map[string]*Node, _contextName string) error {
+func (b *Builder) parseObjectType(typeExpr string, nodes map[string]*Node) error {
 	// Extract the object definition: object({...})
 	if !strings.HasPrefix(typeExpr, "object(") || !strings.HasSuffix(typeExpr, ")") {
 		return fmt.Errorf("invalid object type: %s", typeExpr)
@@ -151,7 +151,7 @@ func (b *Builder) parseObjectType(typeExpr string, nodes map[string]*Node, _cont
 }
 
 // parseFieldType parses the type of a single field and populates the node.
-func (b *Builder) parseFieldType(typeExpr string, node *Node, fieldName string) error {
+func (b *Builder) parseFieldType(typeExpr string, node *Node, _fieldName string) error {
 	typeExpr = strings.TrimSpace(typeExpr)
 
 	// Handle optional wrapper
@@ -159,65 +159,17 @@ func (b *Builder) parseFieldType(typeExpr string, node *Node, fieldName string) 
 		innerType := extractFunctionArg(typeExpr, "optional")
 		// optional() can have a second argument (default value), extract only the first
 		innerType = extractFirstArg(innerType)
-		return b.parseFieldType(innerType, node, fieldName)
+		return b.parseFieldType(innerType, node, _fieldName)
 	}
 
 	// Handle object type
 	if strings.HasPrefix(typeExpr, "object(") {
-		node.Type = "object"
-		// Parse nested object fields
-		content := extractFunctionArg(typeExpr, "object")
-		if strings.HasPrefix(content, "{") && strings.HasSuffix(content, "}") {
-			content = content[1 : len(content)-1]
-		}
-		fields, err := b.parseObjectFields(content)
-		if err != nil {
-			return err
-		}
-		for name, fieldType := range fields {
-			childNode := &Node{
-				Children: make(map[string]*Node),
-			}
-			isOptional := strings.HasPrefix(fieldType, "optional(")
-			childNode.Required = !isOptional
-			if parseErr2 := b.parseFieldType(fieldType, childNode, name); parseErr2 != nil {
-				return err
-			}
-			childNode.Description = fmt.Sprintf("# TODO: Add description for %s", name)
-			node.Children[name] = childNode
-		}
-		return nil
+		return b.parseObjectFieldType(typeExpr, node)
 	}
 
 	// Handle list type
 	if strings.HasPrefix(typeExpr, "list(") {
-		node.Type = "list"
-		innerType := extractFunctionArg(typeExpr, "list")
-		node.ElementType = b.simplifyType(innerType)
-		// If list contains objects, parse them as children
-		if strings.HasPrefix(innerType, "object(") {
-			content := extractFunctionArg(innerType, "object")
-			if strings.HasPrefix(content, "{") && strings.HasSuffix(content, "}") {
-				content = content[1 : len(content)-1]
-			}
-			fields, err := b.parseObjectFields(content)
-			if err != nil {
-				return err
-			}
-			for name, fieldType := range fields {
-				childNode := &Node{
-					Children: make(map[string]*Node),
-				}
-				isOptional := strings.HasPrefix(fieldType, "optional(")
-				childNode.Required = !isOptional
-				if parseErr3 := b.parseFieldType(fieldType, childNode, name); parseErr3 != nil {
-					return parseErr3
-				}
-				childNode.Description = fmt.Sprintf("# TODO: Add description for %s", name)
-				node.Children[name] = childNode
-			}
-		}
-		return nil
+		return b.parseListFieldType(typeExpr, node)
 	}
 
 	// Handle set type
@@ -230,33 +182,7 @@ func (b *Builder) parseFieldType(typeExpr string, node *Node, fieldName string) 
 
 	// Handle map type
 	if strings.HasPrefix(typeExpr, "map(") {
-		node.Type = "map"
-		innerType := extractFunctionArg(typeExpr, "map")
-		node.ValueType = b.simplifyType(innerType)
-		// If map contains objects, parse them as children
-		if strings.HasPrefix(innerType, "object(") {
-			content := extractFunctionArg(innerType, "object")
-			if strings.HasPrefix(content, "{") && strings.HasSuffix(content, "}") {
-				content = content[1 : len(content)-1]
-			}
-			fields, err := b.parseObjectFields(content)
-			if err != nil {
-				return err
-			}
-			for name, fieldType := range fields {
-				childNode := &Node{
-					Children: make(map[string]*Node),
-				}
-				isOptional := strings.HasPrefix(fieldType, "optional(")
-				childNode.Required = !isOptional
-				if parseErr4 := b.parseFieldType(fieldType, childNode, name); parseErr4 != nil {
-					return parseErr4
-				}
-				childNode.Description = fmt.Sprintf("# TODO: Add description for %s", name)
-				node.Children[name] = childNode
-			}
-		}
-		return nil
+		return b.parseMapFieldType(typeExpr, node)
 	}
 
 	// Simple types
@@ -264,16 +190,87 @@ func (b *Builder) parseFieldType(typeExpr string, node *Node, fieldName string) 
 	return nil
 }
 
+// parseObjectFieldType parses an object type and its nested fields.
+func (b *Builder) parseObjectFieldType(typeExpr string, node *Node) error {
+	node.Type = "object"
+	content := extractFunctionArg(typeExpr, "object")
+	if strings.HasPrefix(content, "{") && strings.HasSuffix(content, "}") {
+		content = content[1 : len(content)-1]
+	}
+	fields, err := b.parseObjectFields(content)
+	if err != nil {
+		return err
+	}
+	return b.populateChildNodes(node, fields)
+}
+
+// parseListFieldType parses a list type and its element type.
+func (b *Builder) parseListFieldType(typeExpr string, node *Node) error {
+	node.Type = "list"
+	innerType := extractFunctionArg(typeExpr, "list")
+	node.ElementType = b.simplifyType(innerType)
+	// If list contains objects, parse them as children
+	if strings.HasPrefix(innerType, "object(") {
+		return b.parseNestedObjectChildren(innerType, node)
+	}
+	return nil
+}
+
+// parseMapFieldType parses a map type and its value type.
+func (b *Builder) parseMapFieldType(typeExpr string, node *Node) error {
+	node.Type = "map"
+	innerType := extractFunctionArg(typeExpr, "map")
+	node.ValueType = b.simplifyType(innerType)
+	// If map contains objects, parse them as children
+	if strings.HasPrefix(innerType, "object(") {
+		return b.parseNestedObjectChildren(innerType, node)
+	}
+	return nil
+}
+
+// parseNestedObjectChildren parses object fields within a list or map.
+func (b *Builder) parseNestedObjectChildren(objectTypeExpr string, node *Node) error {
+	content := extractFunctionArg(objectTypeExpr, "object")
+	if strings.HasPrefix(content, "{") && strings.HasSuffix(content, "}") {
+		content = content[1 : len(content)-1]
+	}
+	fields, err := b.parseObjectFields(content)
+	if err != nil {
+		return err
+	}
+	return b.populateChildNodes(node, fields)
+}
+
+// populateChildNodes creates child nodes from parsed fields.
+func (b *Builder) populateChildNodes(node *Node, fields map[string]string) error {
+	for name, fieldType := range fields {
+		childNode := &Node{
+			Children: make(map[string]*Node),
+		}
+		isOptional := strings.HasPrefix(fieldType, "optional(")
+		childNode.Required = !isOptional
+		if err := b.parseFieldType(fieldType, childNode, name); err != nil {
+			return err
+		}
+		childNode.Description = fmt.Sprintf("# TODO: Add description for %s", name)
+		node.Children[name] = childNode
+	}
+	return nil
+}
+
 // extractFirstArg extracts only the first argument from a comma-separated list.
 func extractFirstArg(args string) string {
 	depth := 0
 	for i, ch := range args {
-		if ch == '(' || ch == '{' {
+		switch ch {
+		case '(', '{':
 			depth++
-		} else if ch == ')' || ch == '}' {
+		case ')', '}':
 			depth--
-		} else if ch == ',' && depth == 0 {
-			return strings.TrimSpace(args[:i])
+		case ',':
+			if depth == 0 {
+				return strings.TrimSpace(args[:i])
+			}
 		}
 	}
 	return strings.TrimSpace(args)
@@ -309,78 +306,109 @@ func (b *Builder) parseObjectFields(content string) (map[string]string, error) {
 		return fields, nil
 	}
 
-	// Use a more robust regex-based approach to extract fields
-	// Pattern: fieldname = type_expression
-	// We need to handle nested structures carefully
+	parser := &fieldParser{
+		content: content,
+		fields:  fields,
+	}
+	return parser.parse()
+}
 
-	var currentField string
-	var currentValue strings.Builder
-	depth := 0
-	inField := false
+// fieldParser helps parse object field definitions.
+type fieldParser struct {
+	content      string
+	fields       map[string]string
+	currentField string
+	currentValue strings.Builder
+	depth        int
+	inField      bool
+}
 
-	i := 0
-	for i < len(content) {
-		ch := content[i]
+// parse processes the content and extracts field definitions.
+func (fp *fieldParser) parse() (map[string]string, error) {
+	for i := range len(fp.content) {
+		ch := fp.content[i]
 
-		// Track depth for nested structures
-		if ch == '(' || ch == '{' {
-			depth++
-			if inField {
-				currentValue.WriteByte(ch)
-			}
-		} else if ch == ')' || ch == '}' {
-			depth--
-			if inField {
-				currentValue.WriteByte(ch)
-			}
-		} else if ch == '=' && depth == 0 && !inField {
-			// Found field assignment at top level
-			// Extract field name backwards
-			j := i - 1
-			for j >= 0 && (content[j] == ' ' || content[j] == '\t' || content[j] == '\n' || content[j] == '\r') {
-				j--
-			}
-			end := j + 1
-			for j >= 0 && (isIdentChar(content[j])) {
-				j--
-			}
-			start := j + 1
-			currentField = strings.TrimSpace(content[start:end])
-			inField = true
-			currentValue.Reset()
-		} else if depth == 0 && inField && (ch == '\n' || ch == '\r') {
-			// Check if next non-whitespace is a new field or end
-			j := i + 1
-			for j < len(content) && (content[j] == ' ' || content[j] == '\t' || content[j] == '\n' || content[j] == '\r') {
-				j++
-			}
-			if j >= len(content) || (j < len(content) && isIdentStart(content[j])) {
-				// End of this field
-				if currentField != "" {
-					fields[currentField] = strings.TrimSpace(currentValue.String())
-					currentField = ""
-					currentValue.Reset()
-					inField = false
-				}
-			} else {
-				// Continuation
-				if inField {
-					currentValue.WriteByte(' ')
-				}
-			}
-		} else if inField {
-			currentValue.WriteByte(ch)
+		switch {
+		case ch == '(' || ch == '{':
+			fp.handleOpenBracket(ch)
+		case ch == ')' || ch == '}':
+			fp.handleCloseBracket(ch)
+		case ch == '=' && fp.depth == 0 && !fp.inField:
+			fp.handleAssignment(i)
+		case fp.depth == 0 && fp.inField && (ch == '\n' || ch == '\r'):
+			fp.handleNewline(i)
+		case fp.inField:
+			fp.currentValue.WriteByte(ch)
 		}
-
-		i++
 	}
 
 	// Save last field
-	if currentField != "" && inField {
-		fields[currentField] = strings.TrimSpace(currentValue.String())
-	}
+	fp.saveCurrentField()
+	return fp.fields, nil
+}
 
-	return fields, nil
+// handleOpenBracket processes opening brackets/parentheses.
+func (fp *fieldParser) handleOpenBracket(ch byte) {
+	fp.depth++
+	if fp.inField {
+		fp.currentValue.WriteByte(ch)
+	}
+}
+
+// handleCloseBracket processes closing brackets/parentheses.
+func (fp *fieldParser) handleCloseBracket(ch byte) {
+	fp.depth--
+	if fp.inField {
+		fp.currentValue.WriteByte(ch)
+	}
+}
+
+// handleAssignment processes field assignment operators.
+func (fp *fieldParser) handleAssignment(pos int) {
+	// Extract field name backwards
+	j := pos - 1
+	for j >= 0 && isWhitespace(fp.content[j]) {
+		j--
+	}
+	end := j + 1
+	for j >= 0 && isIdentChar(fp.content[j]) {
+		j--
+	}
+	start := j + 1
+	fp.currentField = strings.TrimSpace(fp.content[start:end])
+	fp.inField = true
+	fp.currentValue.Reset()
+}
+
+// handleNewline processes newline characters and determines field boundaries.
+func (fp *fieldParser) handleNewline(pos int) {
+	// Check if next non-whitespace is a new field or end
+	j := pos + 1
+	for j < len(fp.content) && isWhitespace(fp.content[j]) {
+		j++
+	}
+	if j >= len(fp.content) || (j < len(fp.content) && isIdentStart(fp.content[j])) {
+		// End of this field
+		fp.saveCurrentField()
+	} else if fp.inField {
+		// Continuation
+		fp.currentValue.WriteByte(' ')
+	}
+}
+
+// saveCurrentField saves the current field if one is being processed.
+func (fp *fieldParser) saveCurrentField() {
+	if fp.currentField != "" && fp.inField {
+		fp.fields[fp.currentField] = strings.TrimSpace(fp.currentValue.String())
+		fp.currentField = ""
+		fp.currentValue.Reset()
+		fp.inField = false
+	}
+}
+
+// isWhitespace returns true if ch is a whitespace character.
+func isWhitespace(ch byte) bool {
+	return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r'
 }
 
 // isIdentChar returns true if ch can be part of an identifier.
@@ -487,9 +515,10 @@ func extractFunctionArg(expr, funcName string) string {
 	// Find matching closing paren
 	depth := 1
 	for i, ch := range content {
-		if ch == '(' {
+		switch ch {
+		case '(':
 			depth++
-		} else if ch == ')' {
+		case ')':
 			depth--
 			if depth == 0 {
 				return strings.TrimSpace(content[:i])

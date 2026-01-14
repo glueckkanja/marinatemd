@@ -29,6 +29,7 @@ func (r *Reader) ReadSchema(variableName string) (*schema.Schema, error) {
 
 	// Check if file exists
 	if _, err := os.Stat(yamlPath); os.IsNotExist(err) {
+		//nolint:nilnil // Intentional: nil schema with nil error indicates file doesn't exist yet
 		return nil, nil // Not an error - file just doesn't exist yet
 	}
 
@@ -41,7 +42,7 @@ func (r *Reader) ReadSchema(variableName string) (*schema.Schema, error) {
 	// Parse YAML
 	var s schema.Schema
 	if unmarshalErr := yaml.Unmarshal(content, &s); unmarshalErr != nil {
-		return nil, fmt.Errorf("failed to unmarshal YAML from %s: %w", yamlPath, err)
+		return nil, fmt.Errorf("failed to unmarshal YAML from %s: %w", yamlPath, unmarshalErr)
 	}
 
 	return &s, nil
