@@ -1,14 +1,12 @@
 package yamlio
 
 import (
-	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/c4a8-azure/marinatemd/internal/schema"
-)
-
-// Common errors.
-var (
-	ErrNotImplemented = errors.New("not yet implemented")
+	"gopkg.in/yaml.v3"
 )
 
 // Reader handles reading YAML schema files from disk.
@@ -24,12 +22,43 @@ func NewReader(docsPath string) *Reader {
 }
 
 // ReadSchema reads a YAML schema file for the given variable name.
-func (r *Reader) ReadSchema(_ string) (*schema.Schema, error) {
-	// TODO: Implement YAML reading.
-	// - Construct path: {docsPath}/variables/{variableName}.yaml
-	// - Parse YAML into Schema struct
-	// - Handle file not found gracefully (return nil, nil for new schemas)
-	return nil, ErrNotImplemented
+// Returns nil, nil if the file doesn't exist (not an error condition).
+func (r *Reader) ReadSchema(variableName string) (*schema.Schema, error) {
+	// Construct path: {docsPath}/variables/{variableName}.yaml
+	yamlPath := filepath.Join(r.docsPath, "variables", variableName+".yaml")
+
+	// Check if file exists
+	if _, err := os.Stat(yamlPath); os.IsNotExist(err) {
+		//nolint:nilnil // Intentional: nil schema with nil error indicates file doesn't exist yet
+		return nil, nil // Not an error - file just doesn't exist yet
+	}
+
+	// Read file
+	content, err := os.ReadFile(yamlPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read YAML file %s: %w", yamlPath, err)
+	}
+
+	// Parse YAML
+	var s schema.Schema
+	if unmarshalErr := yaml.Unmarshal(content, &s); unmarshalErr != nil {
+		return nil, fmt.Errorf("failed to unmarshal YAML from %s: %w", yamlPath, unmarshalErr)
+	}
+
+	return &s, nil
+}
+
+// SchemaExists checks if a YAML schema file exists for the given variable.
+func (r *Reader) SchemaExists(variableName string) (bool, error) {
+	yamlPath := filepath.Join(r.docsPath, "variables", variableName+".yaml")
+	_, err := os.Stat(yamlPath)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("failed to check if schema exists: %w", err)
+	}
+	return true, nil
 }
 
 // Writer handles writing YAML schema files to disk.
@@ -45,17 +74,24 @@ func NewWriter(docsPath string) *Writer {
 }
 
 // WriteSchema writes a schema to a YAML file.
-func (w *Writer) WriteSchema(_ *schema.Schema) error {
-	// TODO: Implement YAML writing
-	// - Ensure docs/variables/ directory exists
-	// - Marshal schema to YAML with proper formatting
-	// - Write to {docsPath}/variables/{schema.Variable}.yaml
-	// - Preserve formatting and comments where possible
-	return nil
-}
+func (w *Writer) WriteSchema(s *schema.Schema) error {
+	// Ensure docs/variables/ directory exists
+	varDir := filepath.Join(w.docsPath, "variables")
+	if err := os.MkdirAll(varDir, 0750); err != nil {
+		return fmt.Errorf("failed to create variables directory: %w", err)
+	}
 
-// SchemaExists checks if a YAML schema file exists for the given variable.
-func (r *Reader) SchemaExists(_ string) (bool, error) {
-	// TODO: Check if YAML file exists.
-	return false, ErrNotImplemented
+	// Marshal schema to YAML
+	yamlBytes, err := yaml.Marshal(s)
+	if err != nil {
+		return fmt.Errorf("failed to marshal schema to YAML: %w", err)
+	}
+
+	// Write to file: {docsPath}/variables/{schema.Variable}.yaml
+	yamlPath := filepath.Join(varDir, s.Variable+".yaml")
+	if writeErr := os.WriteFile(yamlPath, yamlBytes, 0600); writeErr != nil {
+		return fmt.Errorf("failed to write YAML file %s: %w", yamlPath, writeErr)
+	}
+
+	return nil
 }
