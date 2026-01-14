@@ -44,12 +44,12 @@ func (p *Parser) ParseVariables(modulePath string) error {
 	parser := hclparse.NewParser()
 
 	for _, filename := range matches {
-		content, err := os.ReadFile(filename)
-		if err != nil {
-			return fmt.Errorf("failed to read file %s: %w", filename, err)
+		fileContent, readErr := os.ReadFile(filename)
+		if readErr != nil {
+			return fmt.Errorf("failed to read file %s: %w", filename, readErr)
 		}
 
-		file, diags := parser.ParseHCL(content, filename)
+		file, diags := parser.ParseHCL(fileContent, filename)
 		if diags.HasErrors() {
 			return fmt.Errorf("failed to parse HCL in %s: %w", filename, diags)
 		}
@@ -69,9 +69,9 @@ func (p *Parser) ParseVariables(modulePath string) error {
 				continue
 			}
 
-			variable, err := p.parseVariableBlock(block)
-			if err != nil {
-				return fmt.Errorf("failed to parse variable %s in %s: %w", block.Labels[0], filename, err)
+			variable, parseErr := p.parseVariableBlock(block)
+			if parseErr != nil {
+				return fmt.Errorf("failed to parse variable %s in %s: %w", block.Labels[0], filename, parseErr)
 			}
 
 			p.variables = append(p.variables, variable)
@@ -115,7 +115,7 @@ func (p *Parser) parseVariableBlock(block *hclsyntax.Block) (*Variable, error) {
 
 	// Check for MARINATED marker
 	if variable.Description != "" {
-		marinatedID, found := extractMarinatedID(variable.Description)
+		marinatedID, found := ExtractMarinatedID(variable.Description)
 		if found {
 			variable.Marinated = true
 			variable.MarinatedID = marinatedID
@@ -166,7 +166,7 @@ func reconstructTypeExpr(expr hclsyntax.Expression) string {
 			}
 			// The key is typically wrapped in an ObjectConsKeyExpr
 			key := ""
-			if scopeTraversal, ok := keyExpr.Wrapped.(*hclsyntax.ScopeTraversalExpr); ok {
+			if scopeTraversal, isScope := keyExpr.Wrapped.(*hclsyntax.ScopeTraversalExpr); isScope {
 				key = scopeTraversal.Traversal.RootName()
 			}
 			valueStr := reconstructTypeExpr(item.ValueExpr)
@@ -200,9 +200,9 @@ func (p *Parser) ExtractMarinatedVars() ([]*Variable, error) {
 	return marinated, nil
 }
 
-// extractMarinatedID extracts the ID from a MARINATED marker in a description.
+// ExtractMarinatedID extracts the ID from a MARINATED marker in a description.
 // Returns the ID and true if found, empty string and false otherwise.
-func extractMarinatedID(description string) (string, bool) {
+func ExtractMarinatedID(description string) (string, bool) {
 	// Pattern: <!-- MARINATED: <id> -->
 	// Allow for spaces around the ID
 	re := regexp.MustCompile(`<!--\s*MARINATED:\s*([a-zA-Z0-9_]+)\s*-->`)

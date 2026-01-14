@@ -78,12 +78,12 @@ variable "plain_var" {
 
 	// Step 3: Write YAML
 	writer := yamlio.NewWriter(tmpDir)
-	if err := writer.WriteSchema(s); err != nil {
-		t.Fatalf("WriteSchema() error = %v", err)
+	if writeErr := writer.WriteSchema(s); writeErr != nil {
+		t.Fatalf("WriteSchema() error = %v", writeErr)
 	}
 
 	yamlPath := filepath.Join(tmpDir, "variables", s.Variable+".yaml")
-	if _, err := os.Stat(yamlPath); os.IsNotExist(err) {
+	if _, statErr := os.Stat(yamlPath); os.IsNotExist(statErr) {
 		t.Fatalf("expected YAML file to exist at %s", yamlPath)
 	}
 
@@ -91,9 +91,9 @@ variable "plain_var" {
 
 	// Step 4: Read it back
 	reader := yamlio.NewReader(tmpDir)
-	readBack, err := reader.ReadSchema(s.Variable)
-	if err != nil {
-		t.Fatalf("ReadSchema() error = %v", err)
+	readBack, readErr := reader.ReadSchema(s.Variable)
+	if readErr != nil {
+		t.Fatalf("ReadSchema() error = %v", readErr)
 	}
 
 	if readBack.Variable != s.Variable {
@@ -116,8 +116,8 @@ variable "plain_var" {
 	readBack.SchemaNodes["database"].Children["host"].Description = "The database hostname or IP"
 
 	// Write the modified version
-	if err := writer.WriteSchema(readBack); err != nil {
-		t.Fatalf("WriteSchema() (modified) error = %v", err)
+	if writeErr2 := writer.WriteSchema(readBack); writeErr2 != nil {
+		t.Fatalf("WriteSchema() (modified) error = %v", writeErr2)
 	}
 
 	// Parse again (simulate code change)
@@ -127,9 +127,9 @@ variable "plain_var" {
 	}
 
 	// Read existing YAML
-	existing, err := reader.ReadSchema("app_config")
-	if err != nil {
-		t.Fatalf("ReadSchema() (for merge) error = %v", err)
+	existing, readExistingErr := reader.ReadSchema("app_config")
+	if readExistingErr != nil {
+		t.Fatalf("ReadSchema() (existing) error = %v", readExistingErr)
 	}
 
 	// Merge

@@ -104,7 +104,7 @@ func (b *Builder) parseType(typeExpr string, nodes map[string]*Node, contextName
 }
 
 // parseObjectType parses an object type expression.
-func (b *Builder) parseObjectType(typeExpr string, nodes map[string]*Node, contextName string) error {
+func (b *Builder) parseObjectType(typeExpr string, nodes map[string]*Node, _contextName string) error {
 	// Extract the object definition: object({...})
 	if !strings.HasPrefix(typeExpr, "object(") || !strings.HasSuffix(typeExpr, ")") {
 		return fmt.Errorf("invalid object type: %s", typeExpr)
@@ -140,8 +140,8 @@ func (b *Builder) parseObjectType(typeExpr string, nodes map[string]*Node, conte
 		node.Required = !isOptional
 
 		// Parse the field type
-		if err := b.parseFieldType(fieldType, node, fieldName); err != nil {
-			return fmt.Errorf("failed to parse field %s: %w", fieldName, err)
+		if parseErr := b.parseFieldType(fieldType, node, fieldName); parseErr != nil {
+			return fmt.Errorf("failed to parse field %s: %w", fieldName, parseErr)
 		}
 
 		nodes[fieldName] = node
@@ -180,7 +180,7 @@ func (b *Builder) parseFieldType(typeExpr string, node *Node, fieldName string) 
 			}
 			isOptional := strings.HasPrefix(fieldType, "optional(")
 			childNode.Required = !isOptional
-			if err := b.parseFieldType(fieldType, childNode, name); err != nil {
+			if parseErr2 := b.parseFieldType(fieldType, childNode, name); parseErr2 != nil {
 				return err
 			}
 			childNode.Description = fmt.Sprintf("# TODO: Add description for %s", name)
@@ -210,8 +210,8 @@ func (b *Builder) parseFieldType(typeExpr string, node *Node, fieldName string) 
 				}
 				isOptional := strings.HasPrefix(fieldType, "optional(")
 				childNode.Required = !isOptional
-				if err := b.parseFieldType(fieldType, childNode, name); err != nil {
-					return err
+				if parseErr3 := b.parseFieldType(fieldType, childNode, name); parseErr3 != nil {
+					return parseErr3
 				}
 				childNode.Description = fmt.Sprintf("# TODO: Add description for %s", name)
 				node.Children[name] = childNode
@@ -249,8 +249,8 @@ func (b *Builder) parseFieldType(typeExpr string, node *Node, fieldName string) 
 				}
 				isOptional := strings.HasPrefix(fieldType, "optional(")
 				childNode.Required = !isOptional
-				if err := b.parseFieldType(fieldType, childNode, name); err != nil {
-					return err
+				if parseErr4 := b.parseFieldType(fieldType, childNode, name); parseErr4 != nil {
+					return parseErr4
 				}
 				childNode.Description = fmt.Sprintf("# TODO: Add description for %s", name)
 				node.Children[name] = childNode
@@ -465,8 +465,8 @@ func (b *Builder) parseMapType(typeExpr string, nodes map[string]*Node, contextN
 			}
 			isOptional := strings.HasPrefix(fieldType, "optional(")
 			childNode.Required = !isOptional
-			if err := b.parseFieldType(fieldType, childNode, name); err != nil {
-				return err
+			if parseErr5 := b.parseFieldType(fieldType, childNode, name); parseErr5 != nil {
+				return parseErr5
 			}
 			childNode.Description = fmt.Sprintf("# TODO: Add description for %s", name)
 			node.Children[name] = childNode
@@ -478,7 +478,7 @@ func (b *Builder) parseMapType(typeExpr string, nodes map[string]*Node, contextN
 }
 
 // extractFunctionArg extracts the argument(s) from a function call.
-// For "optional(...)" it returns "..."
+// For "optional(...)" it returns "...".
 func extractFunctionArg(expr, funcName string) string {
 	if !strings.HasPrefix(expr, funcName+"(") {
 		return ""

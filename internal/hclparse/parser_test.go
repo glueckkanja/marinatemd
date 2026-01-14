@@ -1,9 +1,11 @@
-package hclparse
+package hclparse_test
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/c4a8-azure/marinatemd/internal/hclparse"
 )
 
 func TestParser_ParseVariables(t *testing.T) {
@@ -11,7 +13,7 @@ func TestParser_ParseVariables(t *testing.T) {
 		name       string
 		hclContent string
 		wantErr    bool
-		validate   func(t *testing.T, p *Parser)
+		validate   func(t *testing.T, p *hclparse.Parser)
 	}{
 		{
 			name: "simple string variable with MARINATED marker",
@@ -22,7 +24,7 @@ variable "app_name" {
 }
 `,
 			wantErr: false,
-			validate: func(t *testing.T, p *Parser) {
+			validate: func(t *testing.T, p *hclparse.Parser) {
 				vars, err := p.ExtractMarinatedVars()
 				if err != nil {
 					t.Fatalf("ExtractMarinatedVars() error = %v", err)
@@ -64,7 +66,7 @@ variable "app_config" {
 }
 `,
 			wantErr: false,
-			validate: func(t *testing.T, p *Parser) {
+			validate: func(t *testing.T, p *hclparse.Parser) {
 				vars, err := p.ExtractMarinatedVars()
 				if err != nil {
 					t.Fatalf("ExtractMarinatedVars() error = %v", err)
@@ -106,7 +108,7 @@ variable "local_user" {
 }
 `,
 			wantErr: false,
-			validate: func(t *testing.T, p *Parser) {
+			validate: func(t *testing.T, p *hclparse.Parser) {
 				vars, err := p.ExtractMarinatedVars()
 				if err != nil {
 					t.Fatalf("ExtractMarinatedVars() error = %v", err)
@@ -149,7 +151,7 @@ variable "marinated_two" {
 }
 `,
 			wantErr: false,
-			validate: func(t *testing.T, p *Parser) {
+			validate: func(t *testing.T, p *hclparse.Parser) {
 				vars, err := p.ExtractMarinatedVars()
 				if err != nil {
 					t.Fatalf("ExtractMarinatedVars() error = %v", err)
@@ -180,7 +182,7 @@ variable "allowed_ips" {
 }
 `,
 			wantErr: false,
-			validate: func(t *testing.T, p *Parser) {
+			validate: func(t *testing.T, p *hclparse.Parser) {
 				vars, err := p.ExtractMarinatedVars()
 				if err != nil {
 					t.Fatalf("ExtractMarinatedVars() error = %v", err)
@@ -211,7 +213,7 @@ variable "broken" {
 				t.Fatalf("failed to write test file: %v", err)
 			}
 
-			p := NewParser()
+			p := hclparse.NewParser()
 			err := p.ParseVariables(tmpDir)
 
 			if (err != nil) != tt.wantErr {
@@ -262,7 +264,7 @@ resource "null_resource" "test" {}
 		}
 	}
 
-	p := NewParser()
+	p := hclparse.NewParser()
 	if err := p.ParseVariables(tmpDir); err != nil {
 		t.Fatalf("ParseVariables() error = %v", err)
 	}
@@ -330,7 +332,7 @@ func TestExtractMarinatedID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotID, gotFound := extractMarinatedID(tt.description)
+			gotID, gotFound := hclparse.ExtractMarinatedID(tt.description)
 			if gotID != tt.wantID {
 				t.Errorf("extractMarinatedID() gotID = %v, want %v", gotID, tt.wantID)
 			}

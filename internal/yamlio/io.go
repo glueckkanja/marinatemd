@@ -40,7 +40,7 @@ func (r *Reader) ReadSchema(variableName string) (*schema.Schema, error) {
 
 	// Parse YAML
 	var s schema.Schema
-	if err := yaml.Unmarshal(content, &s); err != nil {
+	if unmarshalErr := yaml.Unmarshal(content, &s); unmarshalErr != nil {
 		return nil, fmt.Errorf("failed to unmarshal YAML from %s: %w", yamlPath, err)
 	}
 
@@ -76,7 +76,7 @@ func NewWriter(docsPath string) *Writer {
 func (w *Writer) WriteSchema(s *schema.Schema) error {
 	// Ensure docs/variables/ directory exists
 	varDir := filepath.Join(w.docsPath, "variables")
-	if err := os.MkdirAll(varDir, 0755); err != nil {
+	if err := os.MkdirAll(varDir, 0750); err != nil {
 		return fmt.Errorf("failed to create variables directory: %w", err)
 	}
 
@@ -88,8 +88,8 @@ func (w *Writer) WriteSchema(s *schema.Schema) error {
 
 	// Write to file: {docsPath}/variables/{schema.Variable}.yaml
 	yamlPath := filepath.Join(varDir, s.Variable+".yaml")
-	if err := os.WriteFile(yamlPath, yamlBytes, 0644); err != nil {
-		return fmt.Errorf("failed to write YAML file %s: %w", yamlPath, err)
+	if writeErr := os.WriteFile(yamlPath, yamlBytes, 0600); writeErr != nil {
+		return fmt.Errorf("failed to write YAML file %s: %w", yamlPath, writeErr)
 	}
 
 	return nil

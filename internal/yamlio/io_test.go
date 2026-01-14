@@ -1,4 +1,4 @@
-package yamlio
+package yamlio_test
 
 import (
 	"os"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/c4a8-azure/marinatemd/internal/schema"
+	"github.com/c4a8-azure/marinatemd/internal/yamlio"
 )
 
 func TestWriter_WriteSchema(t *testing.T) {
@@ -37,7 +38,7 @@ func TestWriter_WriteSchema(t *testing.T) {
 		},
 	}
 
-	writer := NewWriter(tmpDir)
+	writer := yamlio.NewWriter(tmpDir)
 	if err := writer.WriteSchema(schema); err != nil {
 		t.Fatalf("WriteSchema() error = %v", err)
 	}
@@ -49,7 +50,7 @@ func TestWriter_WriteSchema(t *testing.T) {
 	}
 
 	// Read it back and verify
-	reader := NewReader(tmpDir)
+	reader := yamlio.NewReader(tmpDir)
 	readSchema, err := reader.ReadSchema("app_config")
 	if err != nil {
 		t.Fatalf("ReadSchema() error = %v", err)
@@ -65,7 +66,7 @@ func TestWriter_WriteSchema(t *testing.T) {
 
 func TestReader_ReadSchema_NotFound(t *testing.T) {
 	tmpDir := t.TempDir()
-	reader := NewReader(tmpDir)
+	reader := yamlio.NewReader(tmpDir)
 
 	// Reading non-existent schema should return nil, nil
 	schema, err := reader.ReadSchema("nonexistent")
@@ -112,7 +113,7 @@ schema:
 	}
 
 	// Read it
-	reader := NewReader(tmpDir)
+	reader := yamlio.NewReader(tmpDir)
 	schema, err := reader.ReadSchema("app_config")
 	if err != nil {
 		t.Fatalf("ReadSchema() error = %v", err)
@@ -171,13 +172,13 @@ func TestWriter_WriteSchema_ComplexNested(t *testing.T) {
 		},
 	}
 
-	writer := NewWriter(tmpDir)
+	writer := yamlio.NewWriter(tmpDir)
 	if err := writer.WriteSchema(schema); err != nil {
 		t.Fatalf("WriteSchema() error = %v", err)
 	}
 
 	// Read it back
-	reader := NewReader(tmpDir)
+	reader := yamlio.NewReader(tmpDir)
 	readSchema, err := reader.ReadSchema("network_rules")
 	if err != nil {
 		t.Fatalf("ReadSchema() error = %v", err)
@@ -212,12 +213,12 @@ func TestSchemaExists(t *testing.T) {
 		SchemaNodes: map[string]*schema.Node{},
 	}
 
-	writer := NewWriter(tmpDir)
+	writer := yamlio.NewWriter(tmpDir)
 	if err := writer.WriteSchema(schema); err != nil {
 		t.Fatalf("WriteSchema() error = %v", err)
 	}
 
-	reader := NewReader(tmpDir)
+	reader := yamlio.NewReader(tmpDir)
 
 	// Check existing file
 	exists, err := reader.SchemaExists("existing_var")
@@ -263,13 +264,13 @@ func TestWriter_PreserveExistingDescriptions(t *testing.T) {
 		},
 	}
 
-	writer := NewWriter(tmpDir)
+	writer := yamlio.NewWriter(tmpDir)
 	if err := writer.WriteSchema(initialSchema); err != nil {
 		t.Fatalf("WriteSchema() error = %v", err)
 	}
 
 	// Read it back to verify it was written correctly
-	reader := NewReader(tmpDir)
+	reader := yamlio.NewReader(tmpDir)
 	readBack, err := reader.ReadSchema("app_config")
 	if err != nil {
 		t.Fatalf("ReadSchema() error = %v", err)

@@ -1,16 +1,17 @@
-package schema
+package schema_test
 
 import (
 	"testing"
 
 	"github.com/c4a8-azure/marinatemd/internal/hclparse"
+	"github.com/c4a8-azure/marinatemd/internal/schema"
 )
 
 func TestBuildFromHCL_SimpleTypes(t *testing.T) {
 	tests := []struct {
 		name     string
 		variable *hclparse.Variable
-		want     *Schema
+		want     *schema.Schema
 	}{
 		{
 			name: "simple string type",
@@ -20,10 +21,10 @@ func TestBuildFromHCL_SimpleTypes(t *testing.T) {
 				Description: "<!-- MARINATED: app_name -->",
 				MarinatedID: "app_name",
 			},
-			want: &Schema{
+			want: &schema.Schema{
 				Variable:    "app_name",
 				Version:     "1",
-				SchemaNodes: map[string]*Node{},
+				SchemaNodes: map[string]*schema.Node{},
 			},
 		},
 		{
@@ -34,15 +35,15 @@ func TestBuildFromHCL_SimpleTypes(t *testing.T) {
 				Description: "<!-- MARINATED: tags -->",
 				MarinatedID: "tags",
 			},
-			want: &Schema{
+			want: &schema.Schema{
 				Variable: "tags",
 				Version:  "1",
-				SchemaNodes: map[string]*Node{
+				SchemaNodes: map[string]*schema.Node{
 					"_root": {
 						Type:        "list",
 						ElementType: "string",
 						Required:    true,
-						Meta: &MetaInfo{
+						Meta: &schema.MetaInfo{
 							Description: "# TODO: Add description for tags",
 						},
 					},
@@ -53,7 +54,7 @@ func TestBuildFromHCL_SimpleTypes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := NewBuilder()
+			b := schema.NewBuilder()
 			got, err := b.BuildFromVariable(tt.variable)
 			if err != nil {
 				t.Fatalf("BuildFromVariable() error = %v", err)
@@ -87,18 +88,18 @@ func TestBuildFromHCL_ComplexObject(t *testing.T) {
 		MarinatedID: "app_config",
 	}
 
-	b := NewBuilder()
-	schema, err := b.BuildFromVariable(variable)
+	b := schema.NewBuilder()
+	s, err := b.BuildFromVariable(variable)
 	if err != nil {
 		t.Fatalf("BuildFromVariable() error = %v", err)
 	}
 
-	if schema.Variable != "app_config" {
-		t.Errorf("Variable = %v, want app_config", schema.Variable)
+	if s.Variable != "app_config" {
+		t.Errorf("Variable = %v, want app_config", s.Variable)
 	}
 
 	// Check that database node exists
-	database, ok := schema.SchemaNodes["database"]
+	database, ok := s.SchemaNodes["database"]
 	if !ok {
 		t.Fatal("expected 'database' node in schema")
 	}
@@ -117,7 +118,7 @@ func TestBuildFromHCL_ComplexObject(t *testing.T) {
 	}
 
 	// Database should have children (host, port, ssl_mode)
-	if database.Children == nil || len(database.Children) == 0 {
+	if len(database.Children) == 0 {
 		t.Fatal("expected database to have children")
 	}
 
@@ -157,7 +158,7 @@ func TestBuildFromHCL_MapOfObjects(t *testing.T) {
 		MarinatedID: "local_user",
 	}
 
-	b := NewBuilder()
+	b := schema.NewBuilder()
 	schema, err := b.BuildFromVariable(variable)
 	if err != nil {
 		t.Fatalf("BuildFromVariable() error = %v", err)
@@ -187,7 +188,7 @@ func TestBuildFromHCL_NestedOptionalObjects(t *testing.T) {
 		MarinatedID: "network_rules",
 	}
 
-	b := NewBuilder()
+	b := schema.NewBuilder()
 	schema, err := b.BuildFromVariable(variable)
 	if err != nil {
 		t.Fatalf("BuildFromVariable() error = %v", err)
@@ -211,7 +212,7 @@ func TestBuildFromHCL_NestedOptionalObjects(t *testing.T) {
 	}
 
 	// Should have children for the object structure
-	if pla.Children == nil || len(pla.Children) == 0 {
+	if len(pla.Children) == 0 {
 		t.Fatal("expected private_link_access to have children describing object structure")
 	}
 
@@ -242,17 +243,17 @@ func TestBuildFromHCL_NestedOptionalObjects(t *testing.T) {
 
 func TestMergeWithExisting_PreserveDescriptions(t *testing.T) {
 	// Existing schema with user descriptions
-	existing := &Schema{
+	existing := &schema.Schema{
 		Variable: "app_config",
 		Version:  "1",
-		SchemaNodes: map[string]*Node{
+		SchemaNodes: map[string]*schema.Node{
 			"database": {
 				Type:     "object",
 				Required: false,
-				Meta: &MetaInfo{
+				Meta: &schema.MetaInfo{
 					Description: "User-written description for database",
 				},
-				Children: map[string]*Node{
+				Children: map[string]*schema.Node{
 					"host": {
 						Type:        "string",
 						Required:    true,
@@ -269,17 +270,17 @@ func TestMergeWithExisting_PreserveDescriptions(t *testing.T) {
 	}
 
 	// New schema from updated HCL (same structure)
-	newSchema := &Schema{
+	newSchema := &schema.Schema{
 		Variable: "app_config",
 		Version:  "1",
-		SchemaNodes: map[string]*Node{
+		SchemaNodes: map[string]*schema.Node{
 			"database": {
 				Type:     "object",
 				Required: false,
-				Meta: &MetaInfo{
+				Meta: &schema.MetaInfo{
 					Description: "# TODO: Add description for database",
 				},
-				Children: map[string]*Node{
+				Children: map[string]*schema.Node{
 					"host": {
 						Type:        "string",
 						Required:    true,
@@ -295,7 +296,7 @@ func TestMergeWithExisting_PreserveDescriptions(t *testing.T) {
 		},
 	}
 
-	b := NewBuilder()
+	b := schema.NewBuilder()
 	merged, err := b.MergeWithExisting(newSchema, existing)
 	if err != nil {
 		t.Fatalf("MergeWithExisting() error = %v", err)
@@ -315,14 +316,14 @@ func TestMergeWithExisting_PreserveDescriptions(t *testing.T) {
 
 func TestMergeWithExisting_AddNewFields(t *testing.T) {
 	// Existing schema
-	existing := &Schema{
+	existing := &schema.Schema{
 		Variable: "app_config",
 		Version:  "1",
-		SchemaNodes: map[string]*Node{
+		SchemaNodes: map[string]*schema.Node{
 			"database": {
 				Type:     "object",
 				Required: false,
-				Children: map[string]*Node{
+				Children: map[string]*schema.Node{
 					"host": {
 						Type:        "string",
 						Required:    true,
@@ -334,14 +335,14 @@ func TestMergeWithExisting_AddNewFields(t *testing.T) {
 	}
 
 	// New schema with additional field
-	newSchema := &Schema{
+	newSchema := &schema.Schema{
 		Variable: "app_config",
 		Version:  "1",
-		SchemaNodes: map[string]*Node{
+		SchemaNodes: map[string]*schema.Node{
 			"database": {
 				Type:     "object",
 				Required: false,
-				Children: map[string]*Node{
+				Children: map[string]*schema.Node{
 					"host": {
 						Type:        "string",
 						Required:    true,
@@ -357,7 +358,7 @@ func TestMergeWithExisting_AddNewFields(t *testing.T) {
 		},
 	}
 
-	b := NewBuilder()
+	b := schema.NewBuilder()
 	merged, err := b.MergeWithExisting(newSchema, existing)
 	if err != nil {
 		t.Fatalf("MergeWithExisting() error = %v", err)
@@ -377,14 +378,14 @@ func TestMergeWithExisting_AddNewFields(t *testing.T) {
 
 func TestMergeWithExisting_RemoveDeletedFields(t *testing.T) {
 	// Existing schema with a field that will be removed
-	existing := &Schema{
+	existing := &schema.Schema{
 		Variable: "app_config",
 		Version:  "1",
-		SchemaNodes: map[string]*Node{
+		SchemaNodes: map[string]*schema.Node{
 			"database": {
 				Type:     "object",
 				Required: false,
-				Children: map[string]*Node{
+				Children: map[string]*schema.Node{
 					"host": {
 						Type:        "string",
 						Required:    true,
@@ -401,14 +402,14 @@ func TestMergeWithExisting_RemoveDeletedFields(t *testing.T) {
 	}
 
 	// New schema without old_field
-	newSchema := &Schema{
+	newSchema := &schema.Schema{
 		Variable: "app_config",
 		Version:  "1",
-		SchemaNodes: map[string]*Node{
+		SchemaNodes: map[string]*schema.Node{
 			"database": {
 				Type:     "object",
 				Required: false,
-				Children: map[string]*Node{
+				Children: map[string]*schema.Node{
 					"host": {
 						Type:        "string",
 						Required:    true,
@@ -419,7 +420,7 @@ func TestMergeWithExisting_RemoveDeletedFields(t *testing.T) {
 		},
 	}
 
-	b := NewBuilder()
+	b := schema.NewBuilder()
 	merged, err := b.MergeWithExisting(newSchema, existing)
 	if err != nil {
 		t.Fatalf("MergeWithExisting() error = %v", err)
