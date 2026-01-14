@@ -46,7 +46,6 @@ linters:
     - unused          # Check for unused constants, variables, functions and types
 
     # Style & formatting
-    - gofmt           # Check whether code was gofmt-ed
     - goimports       # Check import statements are formatted
     - misspell        # Finds commonly misspelled English words
     - whitespace      # Check for unnecessary newlines
