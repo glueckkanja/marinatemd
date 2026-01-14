@@ -44,10 +44,8 @@ func Load() (*Config, error) {
 	}
 
 	// Validate markdown template configuration
-	if cfg.MarkdownTemplate != nil {
-		if err := cfg.MarkdownTemplate.Validate(); err != nil {
-			return nil, err
-		}
+	if err := cfg.MarkdownTemplate.Validate(); err != nil {
+		return nil, err
 	}
 
 	return cfg, nil
