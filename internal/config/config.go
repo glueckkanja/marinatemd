@@ -4,7 +4,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Config represents the application configuration loaded from .marinated.yml
+// Config represents the application configuration loaded from .marinated.yml.
 type Config struct {
 	// Mock configuration fields for initialization
 	// These will be expanded as features are implemented
@@ -22,8 +22,8 @@ type Config struct {
 	Verbose bool `mapstructure:"verbose"`
 }
 
-// Load returns the configuration loaded from viper
-// This should be called after Viper has been initialized by Cobra
+// Load returns the configuration loaded from viper.
+// This should be called after Viper has been initialized by Cobra.
 func Load() (*Config, error) {
 	cfg := &Config{
 		// Set defaults
@@ -42,7 +42,8 @@ func Load() (*Config, error) {
 }
 
 // SetDefaults configures default values for viper
-// This should be called during initialization before config file is read
+// SetDefaults sets default configuration values.
+// This should be called during initialization before config file is read.
 func SetDefaults() {
 	viper.SetDefault("docs_path", "docs")
 	viper.SetDefault("variables_path", ".")

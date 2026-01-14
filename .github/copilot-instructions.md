@@ -48,6 +48,7 @@ These instructions are for AI coding agents (GitHub Copilot, etc.) working in th
 - **Terraform/OpenTofu compatibility**: Write parsing logic against generic HCL where possible so it can support both Terraform and OpenTofu modules.
 - **Deterministic output**: Ensure generated YAML and markdown are stable across runs (consistent field ordering, heading levels, and list ordering) to minimize noisy diffs.
  - **Testing-first mindset**: Treat tests as a core part of development. Add or update Go tests when changing HCL parsing, schema modeling, YAML IO, markdown rendering, or CLI behavior, and keep `go test ./...` passing.
+- **Linting and formatting**: Follow existing Go code style and conventions. Use `golangci-lint` as configured in `.golangci.yml` to catch issues before committing.
 
 ## How to Work Effectively as an AI Agent
 - When adding new features, **extend the existing extraction → YAML → markdown pipeline** instead of introducing separate, parallel flows.

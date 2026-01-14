@@ -1,0 +1,166 @@
+# GoReleaser configuration
+# Documentation: https://goreleaser.com
+
+version: 2
+
+before:
+  hooks:
+    # Ensure dependencies are up to date
+    - go mod tidy
+    # Run tests before building
+    - go test ./...
+
+builds:
+  - id: marinatemd
+    main: ./main.go
+    binary: marinatemd
+
+    # Environments to build for
+    env:
+      - CGO_ENABLED=0
+
+    goos:
+      - linux
+      - darwin
+      - windows
+
+    goarch:
+      - amd64
+      - arm64
+      - arm
+
+    goarm:
+      - "7"
+
+    # Ignore specific combinations
+    ignore:
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: arm64
+
+    # Build flags
+    flags:
+      - -trimpath
+
+    ldflags:
+      - -s -w
+      - -X github.com/c4a8-azure/marinatemd/cmd/marinatemd.version={{.Version}}
+      - -X github.com/c4a8-azure/marinatemd/cmd/marinatemd.commit={{.Commit}}
+      - -X github.com/c4a8-azure/marinatemd/cmd/marinatemd.date={{.Date}}
+
+archives:
+  - id: marinatemd-archive
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+    format_overrides:
+      - goos: windows
+        format: zip
+
+    files:
+      - README.md
+      - LICENSE
+      - docs/**/*
+
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^ci:'
+      - Merge pull request
+      - Merge branch
+  groups:
+    - title: 'Features'
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: 'Bug Fixes'
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: 'Performance Improvements'
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: 'Refactors'
+      regexp: '^.*?refactor(\([[:word:]]+\))??!?:.+$'
+      order: 3
+    - title: 'Other Changes'
+      order: 999
+
+# GitHub release configuration
+release:
+  github:
+    owner: c4a8-azure
+    name: marinatemd
+
+  # Create a draft release for manual review
+  draft: false
+
+  # Mark as prerelease
+  prerelease: auto
+
+  # Release name template
+  name_template: "Release {{.Version}}"
+
+  # Header and footer for release notes
+  header: |
+    ## MarinateMD {{.Version}}
+
+    Release of MarinateMD - Terraform/OpenTofu variable documentation tool.
+
+  footer: |
+    ## Installation
+
+    ### Using Go
+    ```bash
+    go install github.com/c4a8-azure/marinatemd@{{.Version}}
+    ```
+
+    ### Download Binary
+    Download the appropriate binary for your platform from the assets below.
+
+# Homebrew tap (optional - uncomment if you want to publish to Homebrew)
+# brews:
+#   - name: marinatemd
+#     repository:
+#       owner: c4a8-azure
+#       name: homebrew-tap
+#     folder: Formula
+#     homepage: https://github.com/c4a8-azure/marinatemd
+#     description: "Terraform/OpenTofu variable documentation tool"
+#     license: MIT
+#     install: |
+#       bin.install "marinatemd"
+
+# Docker images (optional)
+# dockers:
+#   - image_templates:
+#       - "ghcr.io/c4a8-azure/marinatemd:{{ .Version }}"
+#       - "ghcr.io/c4a8-azure/marinatemd:latest"
+#     dockerfile: Dockerfile
+#     build_flag_templates:
+#       - "--pull"
+#       - "--label=org.opencontainers.image.created={{.Date}}"
+#       - "--label=org.opencontainers.image.title={{.ProjectName}}"
+#       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+#       - "--label=org.opencontainers.image.version={{.Version}}"
+#     extra_files:
+#       - README.md
+#       - LICENSE

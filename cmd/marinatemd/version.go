@@ -7,20 +7,20 @@ import (
 )
 
 var (
-	// Version is set via build flags
+	// Version is set via build flags.
 	Version = "dev"
-	// Commit is set via build flags
+	// Commit is set via build flags.
 	Commit = "none"
-	// BuildDate is set via build flags
+	// BuildDate is set via build flags.
 	BuildDate = "unknown"
 )
 
-// versionCmd represents the version command
+// versionCmd represents the version command.
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number of marinatemd",
 	Long:  `All software has versions. This is marinatemd's.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		fmt.Printf("marinatemd %s (commit: %s, built: %s)\n", Version, Commit, BuildDate)
 	},
 }
