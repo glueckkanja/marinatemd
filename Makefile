@@ -60,6 +60,11 @@ mod: ## Download and tidy dependencies
 run: ## Run the CLI (use ARGS to pass arguments, e.g., make run ARGS=".")
 	@go run -ldflags "$(LDFLAGS)" . $(ARGS)
 
+.PHONY: tf-docs
+tf-docs: ## Generate Terraform documentation from examples folder
+	@echo "Generating Terraform documentation..."
+	@terraform-docs -c terraform-docs/.terraform-docs.yml examples/
+
 .PHONY: help
 help: ## Display this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
