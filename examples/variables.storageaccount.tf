@@ -305,3 +305,18 @@ variable "timeouts" {
  - `update` - (Defaults to 60 minutes) Used when updating the Storage Account.
 EOT
 }
+
+variable "app_config" {
+  type = object({
+    database = optional(object({
+      host     = string
+      port     = optional(number, 5432)
+      ssl_mode = optional(string, "require")
+    }))
+    cache = optional(object({
+      redis_url = string
+      ttl       = optional(number, 3600)
+    }))
+  })
+  description = "<!-- MARINATED: app_config -->"
+}
