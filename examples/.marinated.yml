@@ -1,0 +1,43 @@
+# Example MarinateMD Configuration File
+# Save as .marinated.yml in your project root
+
+# Path where documentation and YAML schemas are stored
+docs_path: "docs"
+
+# Relative path to find variables.*.tf files
+variables_path: "."
+
+# Path to the README or documentation file to inject into
+readme_path: "README.md"
+
+# Enable verbose logging
+verbose: false
+
+# Markdown template configuration
+markdown_template:
+  # Template for rendering individual attributes
+  # Available placeholders: {attribute}, {required}, {description}, {type}, {default}, {example}
+  # Default: "{attribute} - ({required}) {description}"
+  attribute_template: "{attribute} - ({required}) {description}"
+
+  # Text to display for required fields
+  # Default: "Required"
+  required_text: "Required"
+
+  # Text to display for optional fields
+  # Default: "Optional"
+  optional_text: "Optional"
+
+  # How to escape the attribute name
+  # Options: "inline_code", "bold", "italic", "none"
+  # Default: "inline_code"
+  escape_mode: "inline_code"
+
+  # How to indent nested attributes
+  # Options: "bullets", "spaces"
+  # Default: "bullets"
+  indent_style: "bullets"
+
+  # Number of spaces per indent level (when indent_style is "spaces")
+  # Default: 2
+  indent_size: 2

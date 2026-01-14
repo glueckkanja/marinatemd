@@ -2,6 +2,9 @@ package markdown
 
 import (
 	"errors"
+	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/c4a8-azure/marinatemd/internal/schema"
 )
@@ -13,23 +16,111 @@ var (
 
 // Renderer generates hierarchical markdown from schema models.
 type Renderer struct {
-	// TODO: Add configuration for markdown rendering style.
+	templateCfg *TemplateConfig
 }
 
-// NewRenderer creates a new markdown renderer.
+// NewRenderer creates a new markdown renderer with default template configuration.
 func NewRenderer() *Renderer {
-	return &Renderer{}
+	return &Renderer{
+		templateCfg: DefaultTemplateConfig(),
+	}
+}
+
+// NewRendererWithTemplate creates a new markdown renderer with custom template configuration.
+func NewRendererWithTemplate(templateCfg *TemplateConfig) *Renderer {
+	if templateCfg == nil {
+		templateCfg = DefaultTemplateConfig()
+	}
+	return &Renderer{
+		templateCfg: templateCfg,
+	}
 }
 
 // RenderSchema converts a schema to hierarchical markdown documentation.
-func (r *Renderer) RenderSchema(_ *schema.Schema) (string, error) {
-	// TODO: Implement markdown generation
-	// - Render variable name and overall description from _meta
-	// - Create nested headings/lists for object hierarchy
-	// - Include required/optional flags, defaults, examples
-	// - Format tables or definition lists for attributes
-	// - Ensure deterministic output (stable ordering)
-	return "", nil
+func (r *Renderer) RenderSchema(s *schema.Schema) (string, error) {
+	if s == nil {
+		return "", errors.New("schema cannot be nil")
+	}
+
+	var builder strings.Builder
+
+	// Render each top-level node in sorted order for deterministic output
+	nodeNames := make([]string, 0, len(s.SchemaNodes))
+	for name := range s.SchemaNodes {
+		nodeNames = append(nodeNames, name)
+	}
+	sort.Strings(nodeNames)
+
+	for _, nodeName := range nodeNames {
+		node := s.SchemaNodes[nodeName]
+		if err := r.renderNode(nodeName, node, 0, &builder); err != nil {
+			return "", fmt.Errorf("failed to render node %s: %w", nodeName, err)
+		}
+	}
+
+	return builder.String(), nil
+}
+
+// renderNode recursively renders a node and its children.
+func (r *Renderer) renderNode(name string, node *schema.Node, depth int, builder *strings.Builder) error {
+	if node == nil {
+		return nil
+	}
+
+	// Decide whether this node should be rendered as an attribute entry.
+	//
+	// - Nodes with an explicit description are always rendered as attributes,
+	//   even if they have children.
+	// - Leaf nodes (no children) are rendered as attributes so their type and
+	//   required/default metadata are visible even without a description.
+	hasDescription := node.Description != ""
+	isLeaf := len(node.Children) == 0
+
+	if hasDescription || isLeaf {
+		ctx := TemplateContext{
+			Attribute:   name,
+			Required:    node.Required,
+			Description: node.Description,
+			Type:        node.Type,
+		}
+
+		indent := r.templateCfg.FormatIndent(depth)
+		rendered := r.templateCfg.RenderAttribute(ctx)
+		builder.WriteString(indent)
+		builder.WriteString(rendered)
+		builder.WriteString("\n")
+	} else if node.Meta != nil && node.Meta.Description != "" {
+		// For complex objects with only meta description, render the meta
+		indent := r.templateCfg.FormatIndent(depth)
+		ctx := TemplateContext{
+			Attribute:   name,
+			Required:    node.Required,
+			Description: node.Meta.Description,
+			Type:        node.Type,
+		}
+		rendered := r.templateCfg.RenderAttribute(ctx)
+		builder.WriteString(indent)
+		builder.WriteString(rendered)
+		builder.WriteString("\n")
+	}
+
+	// Render children recursively
+	if len(node.Children) > 0 {
+		childNames := make([]string, 0, len(node.Children))
+		for childName := range node.Children {
+			childNames = append(childNames, childName)
+		}
+		sort.Strings(childNames)
+
+		for _, childName := range childNames {
+			child := node.Children[childName]
+			if err := r.renderNode(childName, child, depth+1, builder); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // Injector handles injecting generated markdown into documentation files.
