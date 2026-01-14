@@ -67,8 +67,16 @@ func (r *Renderer) renderNode(name string, node *schema.Node, depth int, builder
 		return nil
 	}
 
-	// Render this node as an attribute if it has a description or is a leaf node
-	if node.Description != "" || len(node.Children) == 0 {
+	// Decide whether this node should be rendered as an attribute entry.
+	//
+	// - Nodes with an explicit description are always rendered as attributes,
+	//   even if they have children.
+	// - Leaf nodes (no children) are rendered as attributes so their type and
+	//   required/default metadata are visible even without a description.
+	hasDescription := node.Description != ""
+	isLeaf := len(node.Children) == 0
+
+	if hasDescription || isLeaf {
 		ctx := TemplateContext{
 			Attribute:   name,
 			Required:    node.Required,
