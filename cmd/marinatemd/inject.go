@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	readmeFile string
+	docsFile string
 )
 
 // injectCmd represents the inject command that reads YAML schemas and injects markdown into documentation.
@@ -32,7 +32,7 @@ This command:
 Example:
   marinatemd inject .
   marinatemd inject /path/to/terraform/module
-  marinatemd inject --readme docs/VARIABLES.md .`,
+  marinatemd inject --docs-file docs/VARIABLES.md .`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runInject,
 }
@@ -41,8 +41,8 @@ func init() {
 	rootCmd.AddCommand(injectCmd)
 
 	injectCmd.Flags().StringVar(
-		&readmeFile,
-		"readme",
+		&docsFile,
+		"docs-file",
 		"README.md",
 		"documentation file to inject into (relative to docs path)",
 	)
@@ -92,45 +92,45 @@ func setupInjectEnvironment(args []string) (string, *config.Config, string, erro
 	docsPath := filepath.Join(absRoot, cfg.DocsPath)
 	fmt.Printf("Documentation path: %s\n", docsPath)
 
-	readmePath := filepath.Join(docsPath, readmeFile)
-	if _, statErr := os.Stat(readmePath); statErr != nil {
+	docsFilePath := filepath.Join(docsPath, docsFile)
+	if _, statErr := os.Stat(docsFilePath); statErr != nil {
 		return "", nil, "", fmt.Errorf(
-			"documentation file not found: %s\n   Use --readme flag to specify a different file",
-			readmePath)
+			"documentation file not found: %s\n   Use --docs-file flag to specify a different file",
+			docsFilePath)
 	}
 
-	fmt.Printf("Target file: %s\n", readmePath)
-	return absRoot, cfg, readmePath, nil
+	fmt.Printf("Target file: %s\n", docsFilePath)
+	return absRoot, cfg, docsFilePath, nil
 }
 
-func findAndValidateMarkers(injector *markdown.Injector, readmePath string) ([]string, error) {
+func findAndValidateMarkers(injector *markdown.Injector, docsFilePath string) ([]string, error) {
 	fmt.Println("\nInjecting markdown into documentation...")
-	markers, err := injector.FindMarkers(readmePath)
+	markers, err := injector.FindMarkers(docsFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find markers in documentation file: %w", err)
 	}
 
 	if len(markers) == 0 {
-		fmt.Printf("   No MARINATED markers found in %s\n", readmePath)
+		fmt.Printf("   No MARINATED markers found in %s\n", docsFilePath)
 		fmt.Println("\nAdd markers to your documentation file:")
 		fmt.Println("   Description: <!-- MARINATED: variable_name -->")
 		return nil, nil
 	}
 
-	fmt.Printf("   Found %d marker(s) in %s\n", len(markers), readmeFile)
+	fmt.Printf("   Found %d marker(s) in %s\n", len(markers), docsFile)
 	return markers, nil
 }
 
 func processInjectMarkers(
 	markers []string,
-	readmePath string,
+	docsFilePath string,
 	renderer *markdown.Renderer,
 	injector *markdown.Injector,
 	reader *yamlio.Reader,
 ) int {
 	successCount := 0
 	for _, markerID := range markers {
-		if processMarker(markerID, readmePath, renderer, injector, reader) {
+		if processMarker(markerID, docsFilePath, renderer, injector, reader) {
 			successCount++
 		}
 	}
@@ -138,7 +138,7 @@ func processInjectMarkers(
 }
 
 func processMarker(
-	markerID, readmePath string,
+	markerID, docsFilePath string,
 	renderer *markdown.Renderer,
 	injector *markdown.Injector,
 	reader *yamlio.Reader,
@@ -163,7 +163,7 @@ func processMarker(
 		return false
 	}
 
-	if injectErr := injector.InjectIntoFile(readmePath, markerID, renderedMarkdown); injectErr != nil {
+	if injectErr := injector.InjectIntoFile(docsFilePath, markerID, renderedMarkdown); injectErr != nil {
 		fmt.Printf("      WARNING: Could not inject markdown for %s: %v\n", markerID, injectErr)
 		return false
 	}

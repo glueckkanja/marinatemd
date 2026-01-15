@@ -150,7 +150,7 @@ Reads YAML schemas and injects rendered markdown into your README.md at MARINATE
 
 ```bash
 marinatemd inject .
-marinatemd inject --readme docs/VARIABLES.md .
+marinatemd inject --docs-file docs/VARIABLES.md .
 ```
 
 ### `split` - Post-Process Documentation

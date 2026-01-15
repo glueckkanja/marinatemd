@@ -25,7 +25,7 @@ Example:
   marinatemd export .
   marinatemd inject .
   marinatemd export /path/to/terraform/module
-  marinatemd inject --readme docs/VARIABLES.md .`,
+  marinatemd inject --docs-file docs/VARIABLES.md .`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
