@@ -196,6 +196,6 @@ func printSplitSummary(createdFiles []string, absRoot string) {
 		if relErr != nil {
 			relPath = filePath
 		}
-		fmt.Printf("  - %s\\n", relPath)
+		fmt.Printf("  - %s\n", relPath)
 	}
 }
