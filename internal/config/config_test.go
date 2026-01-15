@@ -26,16 +26,16 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.VariablesPath != "." {
 		t.Errorf("VariablesPath = %s, want .", cfg.VariablesPath)
 	}
-	if cfg.ReadmePath != "README.md" {
-		t.Errorf("ReadmePath = %s, want README.md", cfg.ReadmePath)
+	if cfg.DocsFile != "README.md" {
+		t.Errorf("DocsFile = %s, want README.md", cfg.DocsFile)
 	}
 
 	// Check split defaults
 	if cfg.Split == nil {
 		t.Fatal("Split config is nil")
 	}
-	if cfg.Split.InputPath != "README.md" {
-		t.Errorf("Split.InputPath = %s, want README.md", cfg.Split.InputPath)
+	if cfg.Split.InputPath != "" {
+		t.Errorf("Split.InputPath = %s, want empty (defaults to docs_file)", cfg.Split.InputPath)
 	}
 	if cfg.Split.OutputDir != "variables" {
 		t.Errorf("Split.OutputDir = %s, want variables", cfg.Split.OutputDir)
@@ -55,7 +55,7 @@ func TestLoad_FromConfigFile(t *testing.T) {
 
 	configContent := `docs_path: custom_docs
 variables_path: terraform
-readme_path: VARIABLES.md
+docs_file: VARIABLES.md
 split:
   input_path: docs/all_vars.md
   output_dir: split_vars
@@ -88,8 +88,8 @@ split:
 	if cfg.VariablesPath != "terraform" {
 		t.Errorf("VariablesPath = %s, want terraform", cfg.VariablesPath)
 	}
-	if cfg.ReadmePath != "VARIABLES.md" {
-		t.Errorf("ReadmePath = %s, want VARIABLES.md", cfg.ReadmePath)
+	if cfg.DocsFile != "VARIABLES.md" {
+		t.Errorf("DocsFile = %s, want VARIABLES.md", cfg.DocsFile)
 	}
 
 	// Check split config
@@ -118,8 +118,8 @@ func TestSetDefaults(t *testing.T) {
 	if viper.GetString("docs_path") != "docs" {
 		t.Errorf("Default docs_path not set correctly")
 	}
-	if viper.GetString("split.input_path") != "README.md" {
-		t.Errorf("Default split.input_path not set correctly")
+	if viper.GetString("split.input_path") != "" {
+		t.Errorf("Default split.input_path not set correctly, got %q want empty", viper.GetString("split.input_path"))
 	}
 	if viper.GetString("split.output_dir") != "variables" {
 		t.Errorf("Default split.output_dir not set correctly")

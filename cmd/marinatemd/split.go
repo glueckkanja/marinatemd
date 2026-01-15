@@ -118,8 +118,9 @@ func resolveInputPath(absRoot string, cfg *config.Config) string {
 		docsPath := filepath.Join(absRoot, cfg.DocsPath)
 		return filepath.Join(docsPath, cfg.Split.InputPath)
 	default:
+		// Use docs_file as default (relative to docs_path)
 		docsPath := filepath.Join(absRoot, cfg.DocsPath)
-		return filepath.Join(docsPath, "README.md")
+		return filepath.Join(docsPath, cfg.DocsFile)
 	}
 }
 

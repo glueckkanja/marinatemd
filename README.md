@@ -2,18 +2,23 @@
 
 <img width="400" height="400" alt="martinate-md-logo" src="https://github.com/user-attachments/assets/4f628219-e026-4624-9d72-544b96d58b50" />
 
-## 🧊 What's This All About?
+## What's This All About?
 
-Ever tried documenting complex Terraform variables and felt like you're wrestling with a giant blob of HCL? You know the pain: your beautifully structured `object({...})` variables get flattened into unreadable type definitions in terraform-docs, leaving your team scratching their heads about what each nested attribute actually does.
+Ever tried documenting complex Terraform variables and felt like you're wrestling with a giant blob of HCL?
+You know the pain: your beautifully structured `object({...})` variable gets exported into a technical type definition in terraform-docs,
+without any context, leaving your team scratching their heads about what each nested attribute actually does.
+
+To solve this, you have to manually write extensive descriptions and keep track of all changes in your type definitions - an arduous and error-prone task.
 
 **MarinateMD** is your escape hatch from documentation hell.
 
 This Go-powered companion tool transforms the way you document complex Terraform/OpenTofu variables by:
 
-🔍 **Extracting** the hidden structure from your complex variable types  
-📝 **Generating** human-friendly YAML schemas where you can document every single attribute  
-🔄 **Merging** updates intelligently - your custom descriptions survive schema changes  
-🎯 **Injecting** beautiful, structured markdown back into your README.md  
+**Extracting** the hidden structure from your complex variable types  
+**Generating** human-friendly YAML schemas where you can document every single attribute  
+**Merging** updates intelligently - your custom descriptions survive schema changes  
+**Injecting** beautiful, structured markdown back into your README.md  
+**Splitting** monolithic docs into per-variable files for better organization or custom documentation workflows
 
 Think of it as terraform-docs on steroids, specifically designed for those gnarly object variables with dozens of nested attributes. Instead of showing developers a wall of type definitions, they get clean, hierarchical documentation that actually explains what each field does, what's required, and what the defaults are.
 
@@ -21,11 +26,11 @@ Perfect for platform teams building complex modules, infrastructure engineers ti
 
 **TL;DR:** Stop letting complex Terraform variables be documentation black holes. Marinate them in markdown instead.
 
-## 🥒 How It Works
+## How It Works
 
 ### Step 1: Extract the Schema
 
-When MarinateMD encounters a complex variable like this in your `variables.tf`:
+When MarinateMD encounters a variable specially marked like this in your `variables.tf`:
 
 ```hcl
 variable "app_config" {
@@ -44,7 +49,7 @@ variable "app_config" {
 }
 ```
 
-It generates `docs/variables/app_config.yaml`:
+It generates a schema file `docs/variables/app_config.yaml`:
 
 ```yaml
 variable: app_config
@@ -91,48 +96,45 @@ schema:
 
 ### Step 2: Marinate with Documentation
 
-You fill in the descriptions:
+Now it's your turn to fill in the descriptions directly in the YAML file:
 
 ```yaml
 schema:
   _meta:
-    description: |
-      Application configuration object containing database and cache settings.
+    description: Application configuration object containing database and cache settings.
   
   database:
     _meta:
-      description: |
-        Database connection configuration. When omitted, the app runs in memory-only mode.
+      description: Database connection configuration. When omitted, the app runs in memory-only mode.
     host:
-      description: |
-        Database server hostname or IP address
+      description: Database server hostname or IP address
       required: true
       example: "db.example.com"
     port:
-      description: |
-        Database server port number
+      description: Database server port number
       required: false
       default: 5432
 ```
 
-### Step 3: Inject Beautiful Markdown
+### Step 3: Generate your docs with terraform-docs
+
+Run terraform-docs to generate your markdown documentation.
+
+### Step 4: Inject beautiful Markdown
 
 ## MarinateMD Structured Markdown Output
 
-MarinateMD automatically transforms complex object type definitions into clean, hierarchical markdown documentation. This eliminates the need to manually write multiline markdown descriptions for complex data structures.
+MarinateMD automatically transforms complex object type definitions into clean, hierarchical markdown documentation.
+This eliminates the need to manually write multiline markdown descriptions for complex data structures.
 
 ### Benefits
 
-- **Automatic Generation**: No need to manually craft verbose markdown documentation for object types
+- **Automatic Generation**: No need to manually craft markdown documentation for object types
 - **Clear Structure**: Replaces cryptic `object({...})` type annotations with readable, nested documentation
-- **Team-Friendly**: Provides meaningful explanations of each field's purpose and structure
+- **User-Friendly**: Provides meaningful explanations of each field's purpose and structure
 - **Reduced Maintenance**: Documentation stays in sync with your code without manual markdown editing
 
-### How It Works
-
-MarinateMD processes your variable descriptions and automatically generates structured markdown that replaces placeholder content, transforming unclear type definitions into comprehensive documentation that your team can actually understand and use - just add `<!-- MARINATED: variable_name -->` and let the tool handle the rest.
-
-## 📦 Commands
+## Commands
 
 ### `export` - Extract Variable Schemas
 
@@ -167,12 +169,14 @@ marinatemd split --header _header.md --footer _footer.md .
 ```
 
 **Options:**
+
 - `--input` - Input markdown file to split (defaults to `docs/README.md`)
 - `--output` - Output directory for split files (defaults to `docs/variables`)
 - `--header` - Path to header file to prepend to each split file
 - `--footer` - Path to footer file to append to each split file
 
 The split command:
+
 1. Scans the input markdown for MARINATED variable sections
 2. Extracts each section (heading, description, type, default)
 3. Creates `<variable_name>.md` in the output directory
@@ -180,7 +184,7 @@ The split command:
 
 This is particularly useful after using terraform-docs, which lacks flexible output options for complex documentation layouts.
 
-## ⚙️ Configuration
+## Configuration
 
 MarinateMD can be configured via a `.marinated.yml` file in your module root. All settings have sensible defaults and can be overridden via command-line flags.
 
@@ -190,7 +194,7 @@ MarinateMD can be configured via a `.marinated.yml` file in your module root. Al
 # .marinated.yml
 docs_path: docs
 variables_path: .
-readme_path: README.md
+docs_file: README.md
 
 # Split command configuration
 split:
@@ -225,6 +229,7 @@ The `split` section configures default behavior for the `marinatemd split` comma
 ### Example Workflow with Config
 
 1. Create `.marinated.yml` in your module:
+
    ```yaml
    split:
      header_file: templates/_header.md
@@ -233,12 +238,13 @@ The `split` section configures default behavior for the `marinatemd split` comma
    ```
 
 2. Run split without flags (uses config):
+
    ```bash
    marinatemd split .
    ```
 
 3. Override specific settings via CLI:
+
    ```bash
    marinatemd split --output custom_output .
    ```
-

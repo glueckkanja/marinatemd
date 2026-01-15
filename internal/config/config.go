@@ -16,8 +16,8 @@ type Config struct {
 	// VariablesPath is the relative path to find variables.*.tf files
 	VariablesPath string `mapstructure:"variables_path"`
 
-	// ReadmePath is the path to the README or documentation file to inject into
-	ReadmePath string `mapstructure:"readme_path"`
+	// DocsFile is the path to the main documentation file to inject into
+	DocsFile string `mapstructure:"docs_file"`
 
 	// Verbose enables verbose logging
 	Verbose bool `mapstructure:"verbose"`
@@ -31,10 +31,11 @@ type Config struct {
 
 // SplitConfig represents configuration for the split command.
 type SplitConfig struct {
-	// InputPath is the default input markdown file to split (relative to docs_path)
+	// InputPath is the input markdown file to split (relative to docs_path).
+	// If empty, defaults to docs_file.
 	InputPath string `mapstructure:"input_path"`
 
-	// OutputDir is the default output directory for split files (relative to docs_path)
+	// OutputDir is the output directory for split files (relative to docs_path)
 	OutputDir string `mapstructure:"output_dir"`
 
 	// HeaderFile is the path to the header file to prepend to each split file
@@ -51,11 +52,11 @@ func Load() (*Config, error) {
 		// Set defaults
 		DocsPath:         "docs",
 		VariablesPath:    ".",
-		ReadmePath:       "README.md",
+		DocsFile:         "README.md",
 		Verbose:          false,
 		MarkdownTemplate: markdown.DefaultTemplateConfig(),
 		Split: &SplitConfig{
-			InputPath:  "README.md",
+			InputPath:  "", // Empty means use DocsFile
 			OutputDir:  "variables",
 			HeaderFile: "",
 			FooterFile: "",
@@ -81,7 +82,7 @@ func Load() (*Config, error) {
 func SetDefaults() {
 	viper.SetDefault("docs_path", "docs")
 	viper.SetDefault("variables_path", ".")
-	viper.SetDefault("readme_path", "README.md")
+	viper.SetDefault("docs_file", "README.md")
 	viper.SetDefault("verbose", false)
 
 	// Set markdown template defaults
@@ -94,7 +95,7 @@ func SetDefaults() {
 	viper.SetDefault("markdown_template.indent_size", defaultTemplate.IndentSize)
 
 	// Set split command defaults
-	viper.SetDefault("split.input_path", "README.md")
+	viper.SetDefault("split.input_path", "") // Empty means use docs_file
 	viper.SetDefault("split.output_dir", "variables")
 	viper.SetDefault("split.header_file", "")
 	viper.SetDefault("split.footer_file", "")

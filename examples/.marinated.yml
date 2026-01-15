@@ -7,23 +7,22 @@ docs_path: docs
 # Path to Terraform variables files
 variables_path: .
 
-# Default README file to inject into
-readme_path: README.md
+# Default documentation file to inject into
+docs_file: README.md
 
 # Split command configuration
 split:
   # Input markdown file to split (relative to docs_path)
   input_path: README.md
-  
+
   # Output directory for split files (relative to docs_path)
   output_dir: split_output
-  
+
   # Header template file to prepend to each split file
   header_file: _header.md
-  
+
   # Footer template file to append to each split file
   footer_file: _footer.md
-
 # Markdown template configuration (optional)
 # markdown_template:
 #   attribute_template: "{attribute} - ({required}) {description}"
