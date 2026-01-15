@@ -73,8 +73,6 @@ func (s *Splitter) ExtractSections(filePath string) ([]VariableSection, error) {
 // extractSectionsFromContent parses markdown content and extracts variable sections.
 func (s *Splitter) extractSectionsFromContent(content string) ([]VariableSection, error) {
 	var sections []VariableSection
-
-	// Regular expression to match MARINATED markers
 	marinatedMarkerRe := regexp.MustCompile(`<!-- MARINATED:\s*(\S+?)\s*-->`)
 
 	lines := strings.Split(content, "\n")
@@ -85,65 +83,75 @@ func (s *Splitter) extractSectionsFromContent(content string) ([]VariableSection
 	for i, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
 
-		// Check if this is a new variable heading (###)
-		if strings.HasPrefix(trimmedLine, "### ") {
-			// Save previous section if exists
-			if currentSection != nil && len(sectionLines) > 0 {
-				currentSection.Content = strings.Join(sectionLines, "\n")
-				sections = append(sections, *currentSection)
-			}
-
-			// Start a new section
-			currentSection = nil
-			sectionLines = []string{line}
-			inSection = true
-
-			// Check if this section has a MARINATED marker in the next few lines
-			// (typically in the Description line)
-			for j := i + 1; j < len(lines) && j < i+10; j++ {
-				if matches := marinatedMarkerRe.FindStringSubmatch(lines[j]); matches != nil {
-					// Found a MARINATED marker
-					variableName := strings.ReplaceAll(matches[1], "\\_", "_")
-					currentSection = &VariableSection{
-						VariableName: variableName,
-					}
-					break
-				}
-				// Stop looking if we hit another heading
-				if strings.HasPrefix(strings.TrimSpace(lines[j]), "###") ||
-					strings.HasPrefix(strings.TrimSpace(lines[j]), "##") {
-					break
-				}
-			}
+		if isVariableHeading(trimmedLine) {
+			sections = saveCurrentSection(currentSection, sectionLines, sections)
+			currentSection, sectionLines, inSection = startNewSection(line, lines, i, marinatedMarkerRe)
 			continue
 		}
 
-		// Check if we hit a new major section (##) or higher
-		if strings.HasPrefix(trimmedLine, "## ") || strings.HasPrefix(trimmedLine, "# ") {
-			// Save current section if it's a MARINATED variable
-			if currentSection != nil && len(sectionLines) > 0 {
-				currentSection.Content = strings.Join(sectionLines, "\n")
-				sections = append(sections, *currentSection)
-			}
+		if isMajorHeading(trimmedLine) {
+			sections = saveCurrentSection(currentSection, sectionLines, sections)
 			currentSection = nil
 			sectionLines = nil
 			inSection = false
 			continue
 		}
 
-		// Accumulate lines if we're in a MARINATED section
 		if inSection && currentSection != nil {
 			sectionLines = append(sectionLines, line)
 		}
 	}
 
-	// Don't forget the last section
+	// Save the last section
+	sections = saveCurrentSection(currentSection, sectionLines, sections)
+	return sections, nil
+}
+
+func isVariableHeading(line string) bool {
+	return strings.HasPrefix(line, "### ")
+}
+
+func isMajorHeading(line string) bool {
+	return strings.HasPrefix(line, "## ") || strings.HasPrefix(line, "# ")
+}
+
+func saveCurrentSection(
+	currentSection *VariableSection,
+	sectionLines []string,
+	sections []VariableSection,
+) []VariableSection {
 	if currentSection != nil && len(sectionLines) > 0 {
 		currentSection.Content = strings.Join(sectionLines, "\n")
 		sections = append(sections, *currentSection)
 	}
+	return sections
+}
 
-	return sections, nil
+func startNewSection(
+	line string,
+	lines []string,
+	currentIndex int,
+	marinatedMarkerRe *regexp.Regexp,
+) (*VariableSection, []string, bool) {
+	sectionLines := []string{line}
+	currentSection := findMarinatedMarker(lines, currentIndex, marinatedMarkerRe)
+	return currentSection, sectionLines, true
+}
+
+func findMarinatedMarker(lines []string, startIndex int, marinatedMarkerRe *regexp.Regexp) *VariableSection {
+	maxLookAhead := 10
+	endIndex := min(startIndex+1+maxLookAhead, len(lines))
+
+	for j := startIndex + 1; j < endIndex; j++ {
+		if matches := marinatedMarkerRe.FindStringSubmatch(lines[j]); matches != nil {
+			variableName := strings.ReplaceAll(matches[1], "\\_", "_")
+			return &VariableSection{VariableName: variableName}
+		}
+		if isVariableHeading(strings.TrimSpace(lines[j])) || isMajorHeading(strings.TrimSpace(lines[j])) {
+			break
+		}
+	}
+	return nil
 }
 
 // WriteSection writes a single variable section to a file with optional header and footer.
@@ -174,12 +182,12 @@ func (s *Splitter) WriteSection(outputPath string, section VariableSection) erro
 
 	// Ensure output directory exists
 	dir := filepath.Dir(outputPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
 	// Write the file
-	if err := os.WriteFile(outputPath, []byte(content.String()), 0644); err != nil {
+	if err := os.WriteFile(outputPath, []byte(content.String()), 0600); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -205,8 +213,8 @@ func (s *Splitter) SplitToFiles(inputPath string, outputDir string) ([]string, e
 		outputFilename := fmt.Sprintf("%s.md", section.VariableName)
 		outputPath := filepath.Join(outputDir, outputFilename)
 
-		if err := s.WriteSection(outputPath, section); err != nil {
-			return createdFiles, fmt.Errorf("failed to write section for %s: %w", section.VariableName, err)
+		if writeErr := s.WriteSection(outputPath, section); writeErr != nil {
+			return createdFiles, fmt.Errorf("failed to write section for %s: %w", section.VariableName, writeErr)
 		}
 
 		createdFiles = append(createdFiles, outputPath)
