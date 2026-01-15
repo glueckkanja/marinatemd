@@ -10,6 +10,15 @@ The following input variables are supported:
 
 Description: <!-- MARINATED: app\_config -->
 
+- `cache` - (Optional) # TODO: Add description for cache
+  - `redis_url` - (Required) # TODO: Add description for redis_url
+  - `ttl` - (Optional) # TODO: Add description for ttl
+- `database` - (Optional) # TODO: Add description for database
+  - `host` - (Required) # TODO: Add description for host
+  - `port` - (Optional) # TODO: Add description for port
+  - `ssl_mode` - (Optional) # TODO: Add description for ssl_mode
+
+<!-- /MARINATED: app\_config -->
 Type:
 
 ```hcl
