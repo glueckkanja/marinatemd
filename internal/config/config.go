@@ -24,6 +24,24 @@ type Config struct {
 
 	// MarkdownTemplate configures how markdown is generated from schema
 	MarkdownTemplate *markdown.TemplateConfig `mapstructure:"markdown_template"`
+
+	// Split configures the split command behavior
+	Split *SplitConfig `mapstructure:"split"`
+}
+
+// SplitConfig represents configuration for the split command.
+type SplitConfig struct {
+	// InputPath is the default input markdown file to split (relative to docs_path)
+	InputPath string `mapstructure:"input_path"`
+
+	// OutputDir is the default output directory for split files (relative to docs_path)
+	OutputDir string `mapstructure:"output_dir"`
+
+	// HeaderFile is the path to the header file to prepend to each split file
+	HeaderFile string `mapstructure:"header_file"`
+
+	// FooterFile is the path to the footer file to append to each split file
+	FooterFile string `mapstructure:"footer_file"`
 }
 
 // Load returns the configuration loaded from viper.
@@ -36,6 +54,12 @@ func Load() (*Config, error) {
 		ReadmePath:       "README.md",
 		Verbose:          false,
 		MarkdownTemplate: markdown.DefaultTemplateConfig(),
+		Split: &SplitConfig{
+			InputPath:  "README.md",
+			OutputDir:  "variables",
+			HeaderFile: "",
+			FooterFile: "",
+		},
 	}
 
 	// Unmarshal viper config into struct
@@ -68,4 +92,10 @@ func SetDefaults() {
 	viper.SetDefault("markdown_template.escape_mode", defaultTemplate.EscapeMode)
 	viper.SetDefault("markdown_template.indent_style", defaultTemplate.IndentStyle)
 	viper.SetDefault("markdown_template.indent_size", defaultTemplate.IndentSize)
+
+	// Set split command defaults
+	viper.SetDefault("split.input_path", "README.md")
+	viper.SetDefault("split.output_dir", "variables")
+	viper.SetDefault("split.header_file", "")
+	viper.SetDefault("split.footer_file", "")
 }

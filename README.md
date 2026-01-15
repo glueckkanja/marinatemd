@@ -180,3 +180,65 @@ The split command:
 
 This is particularly useful after using terraform-docs, which lacks flexible output options for complex documentation layouts.
 
+## ⚙️ Configuration
+
+MarinateMD can be configured via a `.marinated.yml` file in your module root. All settings have sensible defaults and can be overridden via command-line flags.
+
+### Configuration File Example
+
+```yaml
+# .marinated.yml
+docs_path: docs
+variables_path: .
+readme_path: README.md
+
+# Split command configuration
+split:
+  input_path: README.md          # Input file (relative to docs_path)
+  output_dir: variables          # Output directory (relative to docs_path)
+  header_file: _header.md        # Header template file
+  footer_file: _footer.md        # Footer template file
+
+# Markdown rendering configuration
+markdown_template:
+  attribute_template: "{attribute} - ({required}) {description}"
+  required_text: "Required"
+  optional_text: "Optional"
+  escape_mode: inline_code       # Options: inline_code, none, bold, italic
+  indent_style: bullets          # Options: bullets, spaces
+  indent_size: 2
+```
+
+### Split Configuration
+
+The `split` section configures default behavior for the `marinatemd split` command:
+
+| Setting       | Description                                                | Default     |
+| ------------- | ---------------------------------------------------------- | ----------- |
+| `input_path`  | Input markdown file (relative to `docs_path`)              | `README.md` |
+| `output_dir`  | Output directory for split files (relative to `docs_path`) | `variables` |
+| `header_file` | Path to header template file to prepend to each split file | _(empty)_   |
+| `footer_file` | Path to footer template file to append to each split file  | _(empty)_   |
+
+**Priority Order:** CLI flags override config file settings, which override built-in defaults.
+
+### Example Workflow with Config
+
+1. Create `.marinated.yml` in your module:
+   ```yaml
+   split:
+     header_file: templates/_header.md
+     footer_file: templates/_footer.md
+     output_dir: split_vars
+   ```
+
+2. Run split without flags (uses config):
+   ```bash
+   marinatemd split .
+   ```
+
+3. Override specific settings via CLI:
+   ```bash
+   marinatemd split --output custom_output .
+   ```
+

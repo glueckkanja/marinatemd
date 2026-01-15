@@ -90,9 +90,14 @@ func runSplit(_ *cobra.Command, args []string) error {
 	}
 
 	// Determine input file path
+	// Priority: CLI flag > config file > default
 	inputPath := splitInputFile
-	if inputPath == "" {
-		// Default to docs/README.md
+	if inputPath == "" && cfg.Split != nil && cfg.Split.InputPath != "" {
+		// Use config file setting
+		docsPath := filepath.Join(absRoot, cfg.DocsPath)
+		inputPath = filepath.Join(docsPath, cfg.Split.InputPath)
+	} else if inputPath == "" {
+		// Use hardcoded default
 		docsPath := filepath.Join(absRoot, cfg.DocsPath)
 		inputPath = filepath.Join(docsPath, "README.md")
 	} else if !filepath.IsAbs(inputPath) {
@@ -101,9 +106,14 @@ func runSplit(_ *cobra.Command, args []string) error {
 	}
 
 	// Determine output directory
+	// Priority: CLI flag > config file > default
 	outputDir := splitOutputDir
-	if outputDir == "" {
-		// Default to docs/variables
+	if outputDir == "" && cfg.Split != nil && cfg.Split.OutputDir != "" {
+		// Use config file setting
+		docsPath := filepath.Join(absRoot, cfg.DocsPath)
+		outputDir = filepath.Join(docsPath, cfg.Split.OutputDir)
+	} else if outputDir == "" {
+		// Use hardcoded default
 		docsPath := filepath.Join(absRoot, cfg.DocsPath)
 		outputDir = filepath.Join(docsPath, "variables")
 	} else if !filepath.IsAbs(outputDir) {
@@ -112,6 +122,7 @@ func runSplit(_ *cobra.Command, args []string) error {
 	}
 
 	// Resolve header and footer paths if provided
+	// Priority: CLI flag > config file > none
 	var headerPath, footerPath string
 	if splitHeaderFile != "" {
 		if !filepath.IsAbs(splitHeaderFile) {
@@ -119,13 +130,20 @@ func runSplit(_ *cobra.Command, args []string) error {
 		} else {
 			headerPath = splitHeaderFile
 		}
+	} else if cfg.Split != nil && cfg.Split.HeaderFile != "" {
+		// Use config file setting
+		headerPath = filepath.Join(absRoot, cfg.Split.HeaderFile)
 	}
+
 	if splitFooterFile != "" {
 		if !filepath.IsAbs(splitFooterFile) {
 			footerPath = filepath.Join(absRoot, splitFooterFile)
 		} else {
 			footerPath = splitFooterFile
 		}
+	} else if cfg.Split != nil && cfg.Split.FooterFile != "" {
+		// Use config file setting
+		footerPath = filepath.Join(absRoot, cfg.Split.FooterFile)
 	}
 
 	// Create splitter with templates if provided

@@ -1,43 +1,34 @@
-# Example MarinateMD Configuration File
-# Save as .marinated.yml in your project root
+# MarinateMD Configuration Example
+# This file configures default behavior for marinatemd commands
 
-# Path where documentation and YAML schemas are stored
-docs_path: "docs"
+# Path to documentation directory
+docs_path: docs
 
-# Relative path to find variables.*.tf files
-variables_path: "."
+# Path to Terraform variables files
+variables_path: .
 
-# Path to the README or documentation file to inject into
-readme_path: "README.md"
+# Default README file to inject into
+readme_path: README.md
 
-# Enable verbose logging
-verbose: false
+# Split command configuration
+split:
+  # Input markdown file to split (relative to docs_path)
+  input_path: README.md
+  
+  # Output directory for split files (relative to docs_path)
+  output_dir: split_output
+  
+  # Header template file to prepend to each split file
+  header_file: _header.md
+  
+  # Footer template file to append to each split file
+  footer_file: _footer.md
 
-# Markdown template configuration
-markdown_template:
-  # Template for rendering individual attributes
-  # Available placeholders: {attribute}, {required}, {description}, {type}, {default}, {example}
-  # Default: "{attribute} - ({required}) {description}"
-  attribute_template: "{attribute} - ({required}) {description}"
-
-  # Text to display for required fields
-  # Default: "Required"
-  required_text: "Required"
-
-  # Text to display for optional fields
-  # Default: "Optional"
-  optional_text: "Optional"
-
-  # How to escape the attribute name
-  # Options: "inline_code", "bold", "italic", "none"
-  # Default: "inline_code"
-  escape_mode: "inline_code"
-
-  # How to indent nested attributes
-  # Options: "bullets", "spaces"
-  # Default: "bullets"
-  indent_style: "bullets"
-
-  # Number of spaces per indent level (when indent_style is "spaces")
-  # Default: 2
-  indent_size: 2
+# Markdown template configuration (optional)
+# markdown_template:
+#   attribute_template: "{attribute} - ({required}) {description}"
+#   required_text: "Required"
+#   optional_text: "Optional"
+#   escape_mode: inline_code
+#   indent_style: bullets
+#   indent_size: 2
