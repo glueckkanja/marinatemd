@@ -131,3 +131,52 @@ MarinateMD automatically transforms complex object type definitions into clean, 
 ### How It Works
 
 MarinateMD processes your variable descriptions and automatically generates structured markdown that replaces placeholder content, transforming unclear type definitions into comprehensive documentation that your team can actually understand and use - just add `<!-- MARINATED: variable_name -->` and let the tool handle the rest.
+
+## 📦 Commands
+
+### `export` - Extract Variable Schemas
+
+Scans your Terraform/OpenTofu module for MARINATED variables and generates YAML schema files in `docs/variables/`.
+
+```bash
+marinatemd export .
+```
+
+### `inject` - Update Documentation
+
+Reads YAML schemas and injects rendered markdown into your README.md at MARINATED markers.
+
+```bash
+marinatemd inject .
+marinatemd inject --readme docs/VARIABLES.md .
+```
+
+### `split` - Post-Process Documentation
+
+Splits a markdown file containing multiple MARINATED variables into separate files, one per variable. This is useful when you want individual documentation files instead of a monolithic README.
+
+```bash
+# Basic split - creates docs/variables/*.md
+marinatemd split .
+
+# Custom input/output paths
+marinatemd split --input docs/README.md --output docs/split .
+
+# Add header and footer to each file
+marinatemd split --header _header.md --footer _footer.md .
+```
+
+**Options:**
+- `--input` - Input markdown file to split (defaults to `docs/README.md`)
+- `--output` - Output directory for split files (defaults to `docs/variables`)
+- `--header` - Path to header file to prepend to each split file
+- `--footer` - Path to footer file to append to each split file
+
+The split command:
+1. Scans the input markdown for MARINATED variable sections
+2. Extracts each section (heading, description, type, default)
+3. Creates `<variable_name>.md` in the output directory
+4. Optionally adds header/footer content from template files
+
+This is particularly useful after using terraform-docs, which lacks flexible output options for complex documentation layouts.
+
