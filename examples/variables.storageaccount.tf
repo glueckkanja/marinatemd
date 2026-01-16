@@ -318,5 +318,18 @@ variable "app_config" {
       ttl       = optional(number, 3600)
     }))
   })
-  description = "<!-- MARINATED: app_config -->"
+  description = <<-EOT
+<!-- MARINATED: app_config -->
+
+- `cache` - (Optional) # TODO: Add description for cache
+  - `redis_url` - (Required) # TODO: Add description for redis_url
+  - `ttl` - (Optional) # TODO: Add description for ttl
+- `database` - (Optional) # TODO: Add description for database
+  - `host` - (Required) # TODO: Add description for host
+  - `port` - (Optional) # TODO: Add description for port
+  - `ssl_mode` - (Optional) # TODO: Add description for ssl_mode
+
+
+<!-- /MARINATED: app_config -->
+  EOT
 }
