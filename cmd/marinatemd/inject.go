@@ -90,7 +90,7 @@ func runInject(_ *cobra.Command, args []string) error {
 
 // resolveInjectPaths determines the schema base path and markdown file path based on arguments and flags.
 // The schema base path is the parent directory of 'variables/', not the variables directory itself.
-// Returns: (schemaBasePath, markdownPath, error)
+// Returns: (schemaBasePath, markdownPath, error).
 func resolveInjectPaths(args []string) (string, string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -117,7 +117,10 @@ func resolveInjectPaths(args []string) (string, string, error) {
 	// Verify variables subdirectory exists
 	variablesPath := filepath.Join(schemaBasePath, "variables")
 	if _, statErr := os.Stat(variablesPath); statErr != nil {
-		return "", "", fmt.Errorf("schema directory not found: %s\n   Expected structure: <path>/variables/*.yaml\n   Ensure YAML schema files exist or run 'marinatemd export' first", variablesPath)
+		return "", "", fmt.Errorf(
+			"schema directory not found: %s\n   Expected structure: <path>/variables/*.yaml\n   "+
+				"Ensure YAML schema files exist or run 'marinatemd export' first",
+			variablesPath)
 	}
 	logger.Log.Debug("found variables directory", "path", variablesPath)
 

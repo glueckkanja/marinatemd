@@ -21,11 +21,12 @@ func Setup(verbose, debug bool) {
 	})
 
 	// Set log level based on flags
-	if debug {
+	switch {
+	case debug:
 		Log.SetLevel(log.DebugLevel)
-	} else if verbose {
+	case verbose:
 		Log.SetLevel(log.InfoLevel)
-	} else {
+	default:
 		Log.SetLevel(log.WarnLevel)
 	}
 }
