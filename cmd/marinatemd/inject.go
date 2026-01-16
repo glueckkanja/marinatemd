@@ -7,6 +7,7 @@ import (
 
 	"github.com/c4a8-azure/marinatemd/internal/config"
 	"github.com/c4a8-azure/marinatemd/internal/markdown"
+	"github.com/c4a8-azure/marinatemd/internal/paths"
 	"github.com/c4a8-azure/marinatemd/internal/yamlio"
 	"github.com/spf13/cobra"
 )
@@ -49,15 +50,15 @@ func init() {
 }
 
 func runInject(_ *cobra.Command, args []string) error {
-	absRoot, cfg, readmePath, err := setupInjectEnvironment(args)
+	moduleRoot, cfg, docsFilePath, err := setupInjectEnvironment(args)
 	if err != nil {
 		return err
 	}
 
-	docsPath := filepath.Join(absRoot, cfg.DocsPath)
+	exportPath := paths.ResolveExportPath(moduleRoot, cfg)
 	injector := markdown.NewInjector()
 
-	markers, err := findAndValidateMarkers(injector, readmePath)
+	markers, err := findAndValidateMarkers(injector, docsFilePath)
 	if err != nil {
 		return err
 	}
@@ -66,33 +67,24 @@ func runInject(_ *cobra.Command, args []string) error {
 	}
 
 	renderer := markdown.NewRenderer()
-	reader := yamlio.NewReader(docsPath)
-	successCount := processInjectMarkers(markers, readmePath, renderer, injector, reader)
+	reader := yamlio.NewReader(exportPath)
+	successCount := processInjectMarkers(markers, docsFilePath, renderer, injector, reader)
 	printInjectSummary(successCount, len(markers))
 	return nil
 }
 
 func setupInjectEnvironment(args []string) (string, *config.Config, string, error) {
-	root := "."
-	if len(args) > 0 {
-		root = args[0]
-	}
-
-	absRoot, err := filepath.Abs(root)
+	moduleRoot, cfg, err := paths.SetupEnvironment(args)
 	if err != nil {
-		return "", nil, "", fmt.Errorf("failed to resolve module path: %w", err)
+		return "", nil, "", err
 	}
 
-	cfg, err := config.Load()
-	if err != nil {
-		return "", nil, "", fmt.Errorf("failed to load configuration: %w", err)
-	}
+	exportPath := paths.ResolveExportPath(moduleRoot, cfg)
 
-	fmt.Printf("Injecting documentation into: %s\n", absRoot)
-	docsPath := filepath.Join(absRoot, cfg.DocsPath)
-	fmt.Printf("Documentation path: %s\n", docsPath)
+	fmt.Printf("Injecting documentation into: %s\n", moduleRoot)
+	fmt.Printf("Export path: %s\n", exportPath)
 
-	docsFilePath := filepath.Join(docsPath, docsFile)
+	docsFilePath := filepath.Join(exportPath, docsFile)
 	if _, statErr := os.Stat(docsFilePath); statErr != nil {
 		return "", nil, "", fmt.Errorf(
 			"documentation file not found: %s\n   Use --docs-file flag to specify a different file",
@@ -100,7 +92,7 @@ func setupInjectEnvironment(args []string) (string, *config.Config, string, erro
 	}
 
 	fmt.Printf("Target file: %s\n", docsFilePath)
-	return absRoot, cfg, docsFilePath, nil
+	return moduleRoot, cfg, docsFilePath, nil
 }
 
 func findAndValidateMarkers(injector *markdown.Injector, docsFilePath string) ([]string, error) {

@@ -10,11 +10,8 @@ type Config struct {
 	// Mock configuration fields for initialization
 	// These will be expanded as features are implemented
 
-	// DocsPath is the path where documentation and YAML schemas are stored
-	DocsPath string `mapstructure:"docs_path"`
-
-	// VariablesPath is the relative path to find variables.*.tf files
-	VariablesPath string `mapstructure:"variables_path"`
+	// ExportPath is the path where YAML schemas and documentation are exported
+	ExportPath string `mapstructure:"export_path"`
 
 	// DocsFile is the path to the main documentation file to inject into
 	DocsFile string `mapstructure:"docs_file"`
@@ -31,11 +28,11 @@ type Config struct {
 
 // SplitConfig represents configuration for the split command.
 type SplitConfig struct {
-	// InputPath is the input markdown file to split (relative to docs_path).
+	// InputPath is the input markdown file to split (relative to export_path).
 	// If empty, defaults to docs_file.
 	InputPath string `mapstructure:"input_path"`
 
-	// OutputDir is the output directory for split files (relative to docs_path)
+	// OutputDir is the output directory for split files (relative to export_path)
 	OutputDir string `mapstructure:"output_dir"`
 
 	// HeaderFile is the path to the header file to prepend to each split file
@@ -50,8 +47,7 @@ type SplitConfig struct {
 func Load() (*Config, error) {
 	cfg := &Config{
 		// Set defaults
-		DocsPath:         "docs",
-		VariablesPath:    ".",
+		ExportPath:       "docs",
 		DocsFile:         "README.md",
 		Verbose:          false,
 		MarkdownTemplate: markdown.DefaultTemplateConfig(),
@@ -80,8 +76,7 @@ func Load() (*Config, error) {
 // SetDefaults sets default configuration values.
 // This should be called during initialization before config file is read.
 func SetDefaults() {
-	viper.SetDefault("docs_path", "docs")
-	viper.SetDefault("variables_path", ".")
+	viper.SetDefault("export_path", "docs")
 	viper.SetDefault("docs_file", "README.md")
 	viper.SetDefault("verbose", false)
 

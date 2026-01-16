@@ -1,21 +1,18 @@
 # MarinateMD Configuration Example
 # This file configures default behavior for marinatemd commands
 
-# Path to documentation directory
-docs_path: docs
-
-# Path to Terraform variables files
-variables_path: .
+# Path to export directory
+export_path: docs
 
 # Default documentation file to inject into
 docs_file: README.md
 
 # Split command configuration
 split:
-  # Input markdown file to split (relative to docs_path)
+  # Input markdown file to split (relative to export_path)
   input_path: README.md
 
-  # Output directory for split files (relative to docs_path)
+  # Output directory for split files (relative to export_path)
   output_dir: split_output
 
   # Header template file to prepend to each split file

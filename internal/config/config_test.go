@@ -20,11 +20,8 @@ func TestLoad_Defaults(t *testing.T) {
 	}
 
 	// Check main defaults
-	if cfg.DocsPath != "docs" {
-		t.Errorf("DocsPath = %s, want docs", cfg.DocsPath)
-	}
-	if cfg.VariablesPath != "." {
-		t.Errorf("VariablesPath = %s, want .", cfg.VariablesPath)
+	if cfg.ExportPath != "docs" {
+		t.Errorf("ExportPath = %s, want docs", cfg.ExportPath)
 	}
 	if cfg.DocsFile != "README.md" {
 		t.Errorf("DocsFile = %s, want README.md", cfg.DocsFile)
@@ -53,8 +50,7 @@ func TestLoad_FromConfigFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, ".marinated.yml")
 
-	configContent := `docs_path: custom_docs
-variables_path: terraform
+	configContent := `export_path: custom_docs
 docs_file: VARIABLES.md
 split:
   input_path: docs/all_vars.md
@@ -82,11 +78,8 @@ split:
 	}
 
 	// Check that values were loaded from config file
-	if cfg.DocsPath != "custom_docs" {
-		t.Errorf("DocsPath = %s, want custom_docs", cfg.DocsPath)
-	}
-	if cfg.VariablesPath != "terraform" {
-		t.Errorf("VariablesPath = %s, want terraform", cfg.VariablesPath)
+	if cfg.ExportPath != "custom_docs" {
+		t.Errorf("ExportPath = %s, want custom_docs", cfg.ExportPath)
 	}
 	if cfg.DocsFile != "VARIABLES.md" {
 		t.Errorf("DocsFile = %s, want VARIABLES.md", cfg.DocsFile)
@@ -115,8 +108,8 @@ func TestSetDefaults(t *testing.T) {
 	config.SetDefaults()
 
 	// Check that all defaults are set in viper
-	if viper.GetString("docs_path") != "docs" {
-		t.Errorf("Default docs_path not set correctly")
+	if viper.GetString("export_path") != "docs" {
+		t.Errorf("Default export_path not set correctly")
 	}
 	if viper.GetString("split.input_path") != "" {
 		t.Errorf("Default split.input_path not set correctly, got %q want empty", viper.GetString("split.input_path"))

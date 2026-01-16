@@ -6,6 +6,7 @@ import (
 
 	"github.com/c4a8-azure/marinatemd/internal/config"
 	"github.com/c4a8-azure/marinatemd/internal/markdown"
+	"github.com/c4a8-azure/marinatemd/internal/paths"
 	"github.com/spf13/cobra"
 )
 
@@ -72,78 +73,59 @@ func init() {
 }
 
 func runSplit(_ *cobra.Command, args []string) error {
-	absRoot, cfg, err := setupSplitEnvironment(args)
+	moduleRoot, cfg, err := paths.SetupEnvironment(args)
 	if err != nil {
 		return err
 	}
 
-	inputPath := resolveInputPath(absRoot, cfg)
-	outputDir := resolveOutputDir(absRoot, cfg)
-	headerPath, footerPath := resolveTemplatePaths(absRoot, cfg)
+	inputPath := resolveInputPath(moduleRoot, cfg)
+	outputDir := resolveOutputDir(moduleRoot, cfg)
+	headerPath, footerPath := resolveTemplatePaths(moduleRoot, cfg)
 
 	splitter, err := createSplitter(headerPath, footerPath)
 	if err != nil {
 		return err
 	}
 
-	return executeSplit(splitter, inputPath, outputDir, absRoot)
+	return executeSplit(splitter, inputPath, outputDir, moduleRoot)
 }
 
-func setupSplitEnvironment(args []string) (string, *config.Config, error) {
-	root := "."
-	if len(args) > 0 {
-		root = args[0]
-	}
-
-	absRoot, err := filepath.Abs(root)
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to resolve module path: %w", err)
-	}
-
-	cfg, err := config.Load()
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to load configuration: %w", err)
-	}
-
-	return absRoot, cfg, nil
-}
-
-func resolveInputPath(absRoot string, cfg *config.Config) string {
+func resolveInputPath(moduleRoot string, cfg *config.Config) string {
 	switch {
 	case splitInputFile != "" && filepath.IsAbs(splitInputFile):
 		return splitInputFile
 	case splitInputFile != "":
-		return filepath.Join(absRoot, splitInputFile)
+		return filepath.Join(moduleRoot, splitInputFile)
 	case cfg.Split != nil && cfg.Split.InputPath != "":
-		docsPath := filepath.Join(absRoot, cfg.DocsPath)
-		return filepath.Join(docsPath, cfg.Split.InputPath)
+		exportPath := paths.ResolveExportPath(moduleRoot, cfg)
+		return filepath.Join(exportPath, cfg.Split.InputPath)
 	default:
-		// Use docs_file as default (relative to docs_path)
-		docsPath := filepath.Join(absRoot, cfg.DocsPath)
-		return filepath.Join(docsPath, cfg.DocsFile)
+		// Use docs_file as default (relative to export_path)
+		exportPath := paths.ResolveExportPath(moduleRoot, cfg)
+		return filepath.Join(exportPath, cfg.DocsFile)
 	}
 }
 
-func resolveOutputDir(absRoot string, cfg *config.Config) string {
+func resolveOutputDir(moduleRoot string, cfg *config.Config) string {
 	switch {
 	case splitOutputDir != "" && filepath.IsAbs(splitOutputDir):
 		return splitOutputDir
 	case splitOutputDir != "":
-		return filepath.Join(absRoot, splitOutputDir)
+		return filepath.Join(moduleRoot, splitOutputDir)
 	case cfg.Split != nil && cfg.Split.OutputDir != "":
-		docsPath := filepath.Join(absRoot, cfg.DocsPath)
-		return filepath.Join(docsPath, cfg.Split.OutputDir)
+		exportPath := paths.ResolveExportPath(moduleRoot, cfg)
+		return filepath.Join(exportPath, cfg.Split.OutputDir)
 	default:
-		docsPath := filepath.Join(absRoot, cfg.DocsPath)
-		return filepath.Join(docsPath, "variables")
+		exportPath := paths.ResolveExportPath(moduleRoot, cfg)
+		return filepath.Join(exportPath, "variables")
 	}
 }
 
-func resolveTemplatePaths(absRoot string, cfg *config.Config) (string, string) {
-	headerPath := resolveTemplatePath(absRoot, splitHeaderFile, cfg.Split, func(s *config.SplitConfig) string {
+func resolveTemplatePaths(moduleRoot string, cfg *config.Config) (string, string) {
+	headerPath := resolveTemplatePath(moduleRoot, splitHeaderFile, cfg.Split, func(s *config.SplitConfig) string {
 		return s.HeaderFile
 	})
-	footerPath := resolveTemplatePath(absRoot, splitFooterFile, cfg.Split, func(s *config.SplitConfig) string {
+	footerPath := resolveTemplatePath(moduleRoot, splitFooterFile, cfg.Split, func(s *config.SplitConfig) string {
 		return s.FooterFile
 	})
 	return headerPath, footerPath

@@ -10,17 +10,13 @@
 #
 # All settings can be overridden via CLI flags.
 
-# Path where documentation and YAML schemas are stored
+# Path where YAML schemas and documentation are exported
 # All relative documentation paths are resolved relative to this directory
 # Default: docs
-docs_path: docs
-
-# Path to find variables.*.tf files (relative to module root)
-# Default: . (module root)
-variables_path: .
+export_path: docs
 
 # Main documentation file to inject markdown into
-# Relative to docs_path (or absolute path)
+# Relative to export_path (or absolute path)
 # This is also used as the default input for the split command
 # Default: README.md
 docs_file: README.md
@@ -69,14 +65,14 @@ markdown_template:
 # Controls how the split command extracts MARINATED variables into separate files
 split:
   # Path to the input markdown file to split
-  # If not specified, defaults to docs_file (relative to docs_path)
-  # Can be relative to docs_path or an absolute path
+  # If not specified, defaults to docs_file (relative to export_path)
+  # Can be relative to export_path or an absolute path
   # Default: uses docs_file setting
   # input_path: README.md
 
   # Directory where split markdown files will be written
   # Each MARINATED variable will create a separate file: <variable_name>.md
-  # Relative to docs_path (or absolute path)
+  # Relative to export_path (or absolute path)
   # Default: variables
   output_dir: variables
 

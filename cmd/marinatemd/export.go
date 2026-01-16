@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/c4a8-azure/marinatemd/internal/config"
 	"github.com/c4a8-azure/marinatemd/internal/hclparse"
+	"github.com/c4a8-azure/marinatemd/internal/paths"
 	"github.com/c4a8-azure/marinatemd/internal/schema"
 	"github.com/c4a8-azure/marinatemd/internal/yamlio"
 	"github.com/spf13/cobra"
@@ -38,23 +38,28 @@ func init() {
 }
 
 func runExport(_ *cobra.Command, args []string) error {
-	absRoot, cfg, err := setupExportEnvironment(args)
+	moduleRoot, cfg, err := paths.SetupEnvironment(args)
 	if err != nil {
 		return err
 	}
 
-	marinatedVars, err := parseAndExtractVariables(absRoot)
+	// Resolve paths using config
+	exportPath := paths.ResolveExportPath(moduleRoot, cfg)
+
+	fmt.Printf("Exporting variables from: %s\n", moduleRoot)
+	fmt.Printf("Export path: %s\n", exportPath)
+
+	marinatedVars, err := parseAndExtractVariables(moduleRoot)
 	if err != nil {
 		return err
 	}
 
-	docsPath := filepath.Join(absRoot, cfg.DocsPath)
-	variablesDir := filepath.Join(docsPath, "variables")
+	variablesDir := filepath.Join(exportPath, "variables")
 	if mkdirErr := os.MkdirAll(variablesDir, 0750); mkdirErr != nil {
 		return fmt.Errorf("failed to create variables directory: %w", mkdirErr)
 	}
 
-	if processErr := processMarinatedVariables(marinatedVars, docsPath, variablesDir); processErr != nil {
+	if processErr := processMarinatedVariables(marinatedVars, exportPath, variablesDir); processErr != nil {
 		return processErr
 	}
 
@@ -62,32 +67,10 @@ func runExport(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func setupExportEnvironment(args []string) (string, *config.Config, error) {
-	root := "."
-	if len(args) > 0 {
-		root = args[0]
-	}
-
-	absRoot, err := filepath.Abs(root)
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to resolve module path: %w", err)
-	}
-
-	cfg, err := config.Load()
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to load configuration: %w", err)
-	}
-
-	fmt.Printf("Exporting variables from: %s\n", absRoot)
-	fmt.Printf("Documentation path: %s\n", filepath.Join(absRoot, cfg.DocsPath))
-
-	return absRoot, cfg, nil
-}
-
-func parseAndExtractVariables(absRoot string) ([]*hclparse.Variable, error) {
+func parseAndExtractVariables(variablesPath string) ([]*hclparse.Variable, error) {
 	fmt.Println("\nParsing Terraform variables...")
 	parser := hclparse.NewParser()
-	if err := parser.ParseVariables(absRoot); err != nil {
+	if err := parser.ParseVariables(variablesPath); err != nil {
 		return nil, fmt.Errorf("failed to parse variables: %w", err)
 	}
 

@@ -192,14 +192,13 @@ MarinateMD can be configured via a `.marinated.yml` file in your module root. Al
 
 ```yaml
 # .marinated.yml
-docs_path: docs
-variables_path: .
+export_path: docs
 docs_file: README.md
 
 # Split command configuration
 split:
-  input_path: README.md          # Input file (relative to docs_path)
-  output_dir: variables          # Output directory (relative to docs_path)
+  input_path: README.md          # Input file (relative to export_path)
+  output_dir: variables          # Output directory (relative to export_path)
   header_file: _header.md        # Header template file
   footer_file: _footer.md        # Footer template file
 
@@ -217,12 +216,12 @@ markdown_template:
 
 The `split` section configures default behavior for the `marinatemd split` command:
 
-| Setting       | Description                                                | Default     |
-| ------------- | ---------------------------------------------------------- | ----------- |
-| `input_path`  | Input markdown file (relative to `docs_path`)              | `README.md` |
-| `output_dir`  | Output directory for split files (relative to `docs_path`) | `variables` |
-| `header_file` | Path to header template file to prepend to each split file | _(empty)_   |
-| `footer_file` | Path to footer template file to append to each split file  | _(empty)_   |
+| Setting       | Description                                                 | Default     |
+| ------------- | ----------------------------------------------------------- | ----------- |
+| `input_path`  | Input markdown file (relative to `export_path`)             | `README.md` |
+| `output_dir`  | Output directory for split files (relative to `export_path`)| `variables` |
+| `header_file` | Path to header template file to prepend to each split file  | _(empty)_   |
+| `footer_file` | Path to footer template file to append to each split file   | _(empty)_   |
 
 **Priority Order:** CLI flags override config file settings, which override built-in defaults.
 
