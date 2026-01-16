@@ -5,8 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/c4a8-azure/marinatemd/internal/config"
 	"github.com/c4a8-azure/marinatemd/internal/hclparse"
+	"github.com/c4a8-azure/marinatemd/internal/logger"
+	"github.com/c4a8-azure/marinatemd/internal/paths"
 	"github.com/c4a8-azure/marinatemd/internal/schema"
 	"github.com/c4a8-azure/marinatemd/internal/yamlio"
 	"github.com/spf13/cobra"
@@ -38,23 +39,27 @@ func init() {
 }
 
 func runExport(_ *cobra.Command, args []string) error {
-	absRoot, cfg, err := setupExportEnvironment(args)
+	moduleRoot, cfg, err := paths.SetupEnvironment(args)
 	if err != nil {
 		return err
 	}
 
-	marinatedVars, err := parseAndExtractVariables(absRoot)
+	// Resolve paths using config
+	exportPath := paths.ResolveExportPath(moduleRoot, cfg)
+
+	logger.Log.Info("exporting variables", "moduleRoot", moduleRoot, "exportPath", exportPath)
+
+	marinatedVars, err := parseAndExtractVariables(moduleRoot)
 	if err != nil {
 		return err
 	}
 
-	docsPath := filepath.Join(absRoot, cfg.DocsPath)
-	variablesDir := filepath.Join(docsPath, "variables")
+	variablesDir := filepath.Join(exportPath, "variables")
 	if mkdirErr := os.MkdirAll(variablesDir, 0750); mkdirErr != nil {
 		return fmt.Errorf("failed to create variables directory: %w", mkdirErr)
 	}
 
-	if processErr := processMarinatedVariables(marinatedVars, docsPath, variablesDir); processErr != nil {
+	if processErr := processMarinatedVariables(marinatedVars, exportPath, variablesDir); processErr != nil {
 		return processErr
 	}
 
@@ -62,32 +67,10 @@ func runExport(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func setupExportEnvironment(args []string) (string, *config.Config, error) {
-	root := "."
-	if len(args) > 0 {
-		root = args[0]
-	}
-
-	absRoot, err := filepath.Abs(root)
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to resolve module path: %w", err)
-	}
-
-	cfg, err := config.Load()
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to load configuration: %w", err)
-	}
-
-	fmt.Printf("Exporting variables from: %s\n", absRoot)
-	fmt.Printf("Documentation path: %s\n", filepath.Join(absRoot, cfg.DocsPath))
-
-	return absRoot, cfg, nil
-}
-
-func parseAndExtractVariables(absRoot string) ([]*hclparse.Variable, error) {
-	fmt.Println("\nParsing Terraform variables...")
+func parseAndExtractVariables(variablesPath string) ([]*hclparse.Variable, error) {
+	logger.Log.Debug("parsing terraform variables", "path", variablesPath)
 	parser := hclparse.NewParser()
-	if err := parser.ParseVariables(absRoot); err != nil {
+	if err := parser.ParseVariables(variablesPath); err != nil {
 		return nil, fmt.Errorf("failed to parse variables: %w", err)
 	}
 
@@ -97,12 +80,12 @@ func parseAndExtractVariables(absRoot string) ([]*hclparse.Variable, error) {
 	}
 
 	if len(marinatedVars) == 0 {
-		fmt.Println("WARNING: No MARINATED variables found in module")
-		fmt.Println("   Add <!-- MARINATED: variable_name --> to variable descriptions to enable documentation")
+		logger.Log.Warn("no MARINATED variables found in module",
+			"help", "Add <!-- MARINATED: variable_name --> to variable descriptions to enable documentation")
 		return nil, nil
 	}
 
-	fmt.Printf("Found %d MARINATED variable(s)\n", len(marinatedVars))
+	logger.Log.Info("found marinated variables", "count", len(marinatedVars))
 	return marinatedVars, nil
 }
 
@@ -111,7 +94,7 @@ func processMarinatedVariables(marinatedVars []*hclparse.Variable, docsPath, var
 	reader := yamlio.NewReader(docsPath)
 	writer := yamlio.NewWriter(docsPath)
 
-	fmt.Println("\nProcessing variables...")
+	logger.Log.Debug("processing variables", "count", len(marinatedVars))
 	for _, variable := range marinatedVars {
 		if err := processVariable(variable, builder, reader, writer, variablesDir); err != nil {
 			return err
@@ -127,7 +110,7 @@ func processVariable(
 	writer *yamlio.Writer,
 	variablesDir string,
 ) error {
-	fmt.Printf("\n  Processing '%s' (ID: %s)...\n", variable.Name, variable.MarinatedID)
+	logger.Log.Debug("processing variable", "name", variable.Name, "id", variable.MarinatedID)
 
 	newSchema, err := builder.BuildFromVariable(variable)
 	if err != nil {
@@ -149,23 +132,19 @@ func processVariable(
 		return fmt.Errorf("failed to write schema for %s: %w", variable.MarinatedID, writeErr)
 	}
 
-	fmt.Printf("    Written to %s\n", yamlPath)
+	logger.Log.Info("exported variable", "name", variable.Name, "path", yamlPath)
 	return nil
 }
 
 func mergeOrUseNewSchema(newSchema, existingSchema *schema.Schema, builder *schema.Builder) (*schema.Schema, error) {
 	if existingSchema != nil {
-		fmt.Printf("    Merging with existing schema...\n")
+		logger.Log.Debug("merging with existing schema", "variable", newSchema.Variable)
 		return builder.MergeWithExisting(newSchema, existingSchema)
 	}
-	fmt.Printf("    Creating new schema...\n")
+	logger.Log.Debug("creating new schema", "variable", newSchema.Variable)
 	return newSchema, nil
 }
 
 func printExportSummary(count int, variablesDir string) {
-	fmt.Printf("\nSuccessfully exported %d variable(s)\n", count)
-	fmt.Printf("   YAML schemas written to: %s\n", variablesDir)
-	fmt.Println("\nNext steps:")
-	fmt.Println("   1. Review and edit the generated YAML files to add descriptions")
-	fmt.Println("   2. Run 'marinatemd inject' to update documentation")
+	logger.Log.Info("export complete", "count", count, "directory", variablesDir)
 }

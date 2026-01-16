@@ -1,43 +1,30 @@
-# Example MarinateMD Configuration File
-# Save as .marinated.yml in your project root
+# MarinateMD Configuration Example
+# This file configures default behavior for marinatemd commands
 
-# Path where documentation and YAML schemas are stored
-docs_path: "docs"
+# Path to export directory
+export_path: docs
 
-# Relative path to find variables.*.tf files
-variables_path: "."
+# Default documentation file to inject into
+docs_file: README.md
 
-# Path to the README or documentation file to inject into
-readme_path: "README.md"
+# Split command configuration
+split:
+  # Input markdown file to split (relative to export_path)
+  input_path: README.md
 
-# Enable verbose logging
-verbose: false
+  # Output directory for split files (relative to export_path)
+  output_dir: split_output
 
-# Markdown template configuration
-markdown_template:
-  # Template for rendering individual attributes
-  # Available placeholders: {attribute}, {required}, {description}, {type}, {default}, {example}
-  # Default: "{attribute} - ({required}) {description}"
-  attribute_template: "{attribute} - ({required}) {description}"
+  # Header template file to prepend to each split file
+  header_file: _header.md
 
-  # Text to display for required fields
-  # Default: "Required"
-  required_text: "Required"
-
-  # Text to display for optional fields
-  # Default: "Optional"
-  optional_text: "Optional"
-
-  # How to escape the attribute name
-  # Options: "inline_code", "bold", "italic", "none"
-  # Default: "inline_code"
-  escape_mode: "inline_code"
-
-  # How to indent nested attributes
-  # Options: "bullets", "spaces"
-  # Default: "bullets"
-  indent_style: "bullets"
-
-  # Number of spaces per indent level (when indent_style is "spaces")
-  # Default: 2
-  indent_size: 2
+  # Footer template file to append to each split file
+  footer_file: _footer.md
+# Markdown template configuration (optional)
+# markdown_template:
+#   attribute_template: "{attribute} - ({required}) {description}"
+#   required_text: "Required"
+#   optional_text: "Optional"
+#   escape_mode: inline_code
+#   indent_style: bullets
+#   indent_size: 2
