@@ -5,36 +5,44 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/c4a8-azure/marinatemd/internal/config"
 	"github.com/c4a8-azure/marinatemd/internal/logger"
 	"github.com/c4a8-azure/marinatemd/internal/markdown"
-	"github.com/c4a8-azure/marinatemd/internal/paths"
 	"github.com/c4a8-azure/marinatemd/internal/yamlio"
 	"github.com/spf13/cobra"
 )
 
 var (
-	docsFile string
+	markdownFile string
 )
 
 // injectCmd represents the inject command that reads YAML schemas and injects markdown into documentation.
 var injectCmd = &cobra.Command{
-	Use:   "inject [module-path]",
+	Use:   "inject [schema-path]",
 	Short: "Inject YAML schema documentation into markdown files",
-	Long: `Read YAML schema files from docs/variables/ and inject rendered markdown
-documentation into README.md or other documentation files at MARINATED markers.
+	Long: `Read YAML schema files and inject rendered markdown documentation into a markdown file.
 
-This command:
-  1. Scans the documentation file for <!-- MARINATED: variable_name --> markers
-  2. Reads corresponding YAML schema files
-  3. Renders hierarchical markdown from the schemas
-  4. Injects the markdown between start and end markers
-  5. Preserves all other content in the documentation
+Arguments:
+  [schema-path]  Optional path to directory containing 'variables' subdirectory with YAML schemas.
+                 The tool expects schema files at <schema-path>/variables/*.yaml
+                 Defaults to <current-dir>/docs
 
-Example:
-  marinatemd inject .
-  marinatemd inject /path/to/terraform/module
-  marinatemd inject --docs-file docs/VARIABLES.md .`,
+Flags:
+  --markdown-file  Path to the markdown file to inject into.
+                   Can be absolute or relative to current working directory.
+                   Defaults to <current-dir>/README.md
+
+Examples:
+  # 1. Use default paths (./docs/variables/*.yaml → ./README.md)
+  marinatemd inject
+
+  # 2. Custom schema base path, default markdown file (./README.md)
+  #    Reads from /path/to/schemas/variables/*.yaml
+  marinatemd inject /path/to/schemas
+  marinatemd inject ./docs
+
+  # 3. Custom schema path and custom markdown file
+  marinatemd inject /path/to/schemas --markdown-file docs/API.md
+  marinatemd inject ./docs --markdown-file /abs/path/to/doc.md`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runInject,
 }
@@ -43,23 +51,29 @@ func init() {
 	rootCmd.AddCommand(injectCmd)
 
 	injectCmd.Flags().StringVar(
-		&docsFile,
-		"docs-file",
-		"README.md",
-		"documentation file to inject into (relative to docs path)",
+		&markdownFile,
+		"markdown-file",
+		"",
+		"markdown file to inject into (absolute or relative to current directory)",
 	)
 }
 
 func runInject(_ *cobra.Command, args []string) error {
-	moduleRoot, cfg, docsFilePath, err := setupInjectEnvironment(args)
+	schemaBasePath, markdownPath, err := resolveInjectPaths(args)
 	if err != nil {
 		return err
 	}
 
-	exportPath := paths.ResolveExportPath(moduleRoot, cfg)
-	injector := markdown.NewInjector()
+	logger.Log.Info("injecting documentation", "schemaBasePath", schemaBasePath, "markdownPath", markdownPath)
 
-	markers, err := findAndValidateMarkers(injector, docsFilePath)
+	// Verify markdown file exists
+	if _, statErr := os.Stat(markdownPath); statErr != nil {
+		return fmt.Errorf("markdown file not found: %s", markdownPath)
+	}
+	logger.Log.Debug("markdown file found", "path", markdownPath)
+
+	injector := markdown.NewInjector()
+	markers, err := findAndValidateMarkers(injector, markdownPath)
 	if err != nil {
 		return err
 	}
@@ -68,61 +82,92 @@ func runInject(_ *cobra.Command, args []string) error {
 	}
 
 	renderer := markdown.NewRenderer()
-	reader := yamlio.NewReader(exportPath)
-	successCount := processInjectMarkers(markers, docsFilePath, renderer, injector, reader)
+	reader := yamlio.NewReader(schemaBasePath)
+	successCount := processInjectMarkers(markers, markdownPath, renderer, injector, reader)
 	printInjectSummary(successCount, len(markers))
 	return nil
 }
 
-func setupInjectEnvironment(args []string) (string, *config.Config, string, error) {
-	moduleRoot, cfg, err := paths.SetupEnvironment(args)
+// resolveInjectPaths determines the schema base path and markdown file path based on arguments and flags.
+// The schema base path is the parent directory of 'variables/', not the variables directory itself.
+// Returns: (schemaBasePath, markdownPath, error)
+func resolveInjectPaths(args []string) (string, string, error) {
+	cwd, err := os.Getwd()
 	if err != nil {
-		return "", nil, "", err
+		return "", "", fmt.Errorf("failed to get current directory: %w", err)
+	}
+	logger.Log.Debug("current working directory", "path", cwd)
+
+	// Determine schema base path (parent of 'variables/')
+	var schemaBasePath string
+	if len(args) > 0 {
+		// Use provided schema base path argument
+		if filepath.IsAbs(args[0]) {
+			schemaBasePath = args[0]
+		} else {
+			schemaBasePath = filepath.Join(cwd, args[0])
+		}
+		logger.Log.Debug("using schema base path from argument", "input", args[0], "resolved", schemaBasePath)
+	} else {
+		// Default: <cwd>/docs
+		schemaBasePath = filepath.Join(cwd, "docs")
+		logger.Log.Debug("using default schema base path", "path", schemaBasePath)
 	}
 
-	exportPath := paths.ResolveExportPath(moduleRoot, cfg)
+	// Verify variables subdirectory exists
+	variablesPath := filepath.Join(schemaBasePath, "variables")
+	if _, statErr := os.Stat(variablesPath); statErr != nil {
+		return "", "", fmt.Errorf("schema directory not found: %s\n   Expected structure: <path>/variables/*.yaml\n   Ensure YAML schema files exist or run 'marinatemd export' first", variablesPath)
+	}
+	logger.Log.Debug("found variables directory", "path", variablesPath)
 
-	logger.Log.Info("injecting documentation", "moduleRoot", moduleRoot, "exportPath", exportPath)
-
-	docsFilePath := filepath.Join(exportPath, docsFile)
-	if _, statErr := os.Stat(docsFilePath); statErr != nil {
-		return "", nil, "", fmt.Errorf(
-			"documentation file not found: %s\n   Use --docs-file flag to specify a different file",
-			docsFilePath)
+	// Determine markdown file path
+	var markdownPath string
+	if markdownFile != "" {
+		// Use provided markdown file flag
+		if filepath.IsAbs(markdownFile) {
+			markdownPath = markdownFile
+		} else {
+			markdownPath = filepath.Join(cwd, markdownFile)
+		}
+		logger.Log.Debug("using markdown file from flag", "input", markdownFile, "resolved", markdownPath)
+	} else {
+		// Default: <cwd>/README.md
+		markdownPath = filepath.Join(cwd, "README.md")
+		logger.Log.Debug("using default markdown file", "path", markdownPath)
 	}
 
-	logger.Log.Debug("target documentation file", "path", docsFilePath)
-	return moduleRoot, cfg, docsFilePath, nil
+	return schemaBasePath, markdownPath, nil
 }
 
-func findAndValidateMarkers(injector *markdown.Injector, docsFilePath string) ([]string, error) {
-	logger.Log.Debug("scanning for MARINATED markers", "file", docsFilePath)
-	markers, err := injector.FindMarkers(docsFilePath)
+func findAndValidateMarkers(injector *markdown.Injector, markdownPath string) ([]string, error) {
+	logger.Log.Debug("scanning for MARINATED markers", "file", markdownPath)
+	markers, err := injector.FindMarkers(markdownPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find markers in documentation file: %w", err)
 	}
 
 	if len(markers) == 0 {
 		logger.Log.Warn("no MARINATED markers found in documentation",
-			"file", docsFilePath,
+			"file", markdownPath,
 			"help", "Add <!-- MARINATED: variable_name --> to your documentation")
 		return nil, nil
 	}
 
-	logger.Log.Info("found markers", "count", len(markers), "file", docsFile)
+	logger.Log.Info("found markers", "count", len(markers), "file", filepath.Base(markdownPath))
 	return markers, nil
 }
 
 func processInjectMarkers(
 	markers []string,
-	docsFilePath string,
+	markdownPath string,
 	renderer *markdown.Renderer,
 	injector *markdown.Injector,
 	reader *yamlio.Reader,
 ) int {
 	successCount := 0
 	for _, markerID := range markers {
-		if processMarker(markerID, docsFilePath, renderer, injector, reader) {
+		if processMarker(markerID, markdownPath, renderer, injector, reader) {
 			successCount++
 		}
 	}
@@ -130,7 +175,7 @@ func processInjectMarkers(
 }
 
 func processMarker(
-	markerID, docsFilePath string,
+	markerID, markdownPath string,
 	renderer *markdown.Renderer,
 	injector *markdown.Injector,
 	reader *yamlio.Reader,
@@ -156,7 +201,7 @@ func processMarker(
 		return false
 	}
 
-	if injectErr := injector.InjectIntoFile(docsFilePath, markerID, renderedMarkdown); injectErr != nil {
+	if injectErr := injector.InjectIntoFile(markdownPath, markerID, renderedMarkdown); injectErr != nil {
 		logger.Log.Warn("could not inject markdown", "marker", markerID, "error", injectErr)
 		return false
 	}
