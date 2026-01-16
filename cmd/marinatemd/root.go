@@ -3,11 +3,17 @@ package marinatemd
 import (
 	"os"
 
+	"github.com/c4a8-azure/marinatemd/internal/config"
+	"github.com/c4a8-azure/marinatemd/internal/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
+var (
+	cfgFile string
+	verbose bool
+	debug   bool
+)
 
 // rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
@@ -38,7 +44,10 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
+	cobra.OnInitialize(initLogger, initConfig)
+
+	// Set viper defaults before config file is read
+	config.SetDefaults()
 
 	// Persistent flags (available to all subcommands)
 	rootCmd.PersistentFlags().StringVarP(
@@ -48,14 +57,32 @@ func init() {
 		"",
 		"config file (default searches for .marinated.yml in multiple locations)",
 	)
+
+	rootCmd.PersistentFlags().BoolVarP(
+		&verbose,
+		"verbose",
+		"v",
+		false,
+		"enable verbose output (info level)",
+	)
+
+	rootCmd.PersistentFlags().BoolVarP(
+		&debug,
+		"debug",
+		"d",
+		false,
+		"enable debug output (most detailed)",
+	)
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	if cfgFile != "" {
+		logger.Log.Debug("using config file from flag", "path", cfgFile)
 		// Use config file from the flag
 		viper.SetConfigFile(cfgFile)
 	} else {
+		logger.Log.Debug("searching for config file in default locations")
 		// Search for config in multiple locations
 		viper.SetConfigName(".marinated")
 		viper.SetConfigType("yml")
@@ -63,17 +90,30 @@ func initConfig() {
 		// Current directory
 		viper.AddConfigPath(".")
 		viper.AddConfigPath(".config")
+		logger.Log.Debug("added config search paths", "paths", "., .config")
 
 		// Home directory
 		if home, err := os.UserHomeDir(); err == nil {
-			viper.AddConfigPath(home + "/.marinated.d")
+			homePath := home + "/.marinated.d"
+			viper.AddConfigPath(homePath)
+			logger.Log.Debug("added home config path", "path", homePath)
 		}
 	}
 
 	// Read in environment variables that match
 	viper.SetEnvPrefix("MARINATED")
 	viper.AutomaticEnv()
+	logger.Log.Debug("environment variables enabled", "prefix", "MARINATED")
 
 	// If a config file is found, read it in (ignore errors silently).
-	_ = viper.ReadInConfig()
+	if err := viper.ReadInConfig(); err == nil {
+		logger.Log.Debug("config file loaded", "path", viper.ConfigFileUsed())
+	} else {
+		logger.Log.Debug("no config file found, using defaults", "error", err)
+	}
+}
+
+// initLogger sets up the logger based on verbose and debug flags.
+func initLogger() {
+	logger.Setup(verbose, debug)
 }

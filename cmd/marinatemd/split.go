@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/c4a8-azure/marinatemd/internal/config"
+	"github.com/c4a8-azure/marinatemd/internal/logger"
 	"github.com/c4a8-azure/marinatemd/internal/markdown"
 	"github.com/c4a8-azure/marinatemd/internal/paths"
 	"github.com/spf13/cobra"
@@ -154,15 +155,14 @@ func createSplitter(headerPath, footerPath string) (*markdown.Splitter, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to create splitter with templates: %w", err)
 		}
-		fmt.Printf("Using header: %s\n", headerPath)
-		fmt.Printf("Using footer: %s\n", footerPath)
+		logger.Log.Debug("using templates", "header", headerPath, "footer", footerPath)
 		return splitter, nil
 	}
 	return markdown.NewSplitter(), nil
 }
 
 func executeSplit(splitter *markdown.Splitter, inputPath, outputDir, absRoot string) error {
-	fmt.Printf("Splitting %s...\n", inputPath)
+	logger.Log.Debug("splitting file", "input", inputPath, "output", outputDir)
 	createdFiles, err := splitter.SplitToFiles(inputPath, outputDir)
 	if err != nil {
 		return fmt.Errorf("failed to split file: %w", err)
@@ -173,12 +173,12 @@ func executeSplit(splitter *markdown.Splitter, inputPath, outputDir, absRoot str
 }
 
 func printSplitSummary(createdFiles []string, absRoot string) {
-	fmt.Printf("\n✓ Successfully split into %d files:\n", len(createdFiles))
+	logger.Log.Info("split complete", "files", len(createdFiles))
 	for _, filePath := range createdFiles {
 		relPath, relErr := filepath.Rel(absRoot, filePath)
 		if relErr != nil {
 			relPath = filePath
 		}
-		fmt.Printf("  - %s\n", relPath)
+		logger.Log.Debug("created file", "path", relPath)
 	}
 }

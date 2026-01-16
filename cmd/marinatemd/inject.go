@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/c4a8-azure/marinatemd/internal/config"
+	"github.com/c4a8-azure/marinatemd/internal/logger"
 	"github.com/c4a8-azure/marinatemd/internal/markdown"
 	"github.com/c4a8-azure/marinatemd/internal/paths"
 	"github.com/c4a8-azure/marinatemd/internal/yamlio"
@@ -81,8 +82,7 @@ func setupInjectEnvironment(args []string) (string, *config.Config, string, erro
 
 	exportPath := paths.ResolveExportPath(moduleRoot, cfg)
 
-	fmt.Printf("Injecting documentation into: %s\n", moduleRoot)
-	fmt.Printf("Export path: %s\n", exportPath)
+	logger.Log.Info("injecting documentation", "moduleRoot", moduleRoot, "exportPath", exportPath)
 
 	docsFilePath := filepath.Join(exportPath, docsFile)
 	if _, statErr := os.Stat(docsFilePath); statErr != nil {
@@ -91,25 +91,25 @@ func setupInjectEnvironment(args []string) (string, *config.Config, string, erro
 			docsFilePath)
 	}
 
-	fmt.Printf("Target file: %s\n", docsFilePath)
+	logger.Log.Debug("target documentation file", "path", docsFilePath)
 	return moduleRoot, cfg, docsFilePath, nil
 }
 
 func findAndValidateMarkers(injector *markdown.Injector, docsFilePath string) ([]string, error) {
-	fmt.Println("\nInjecting markdown into documentation...")
+	logger.Log.Debug("scanning for MARINATED markers", "file", docsFilePath)
 	markers, err := injector.FindMarkers(docsFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find markers in documentation file: %w", err)
 	}
 
 	if len(markers) == 0 {
-		fmt.Printf("   No MARINATED markers found in %s\n", docsFilePath)
-		fmt.Println("\nAdd markers to your documentation file:")
-		fmt.Println("   Description: <!-- MARINATED: variable_name -->")
+		logger.Log.Warn("no MARINATED markers found in documentation",
+			"file", docsFilePath,
+			"help", "Add <!-- MARINATED: variable_name --> to your documentation")
 		return nil, nil
 	}
 
-	fmt.Printf("   Found %d marker(s) in %s\n", len(markers), docsFile)
+	logger.Log.Info("found markers", "count", len(markers), "file", docsFile)
 	return markers, nil
 }
 
@@ -135,39 +135,40 @@ func processMarker(
 	injector *markdown.Injector,
 	reader *yamlio.Reader,
 ) bool {
-	fmt.Printf("   Injecting documentation for '%s'...\n", markerID)
+	logger.Log.Debug("injecting documentation", "marker", markerID)
 
 	schema, err := reader.ReadSchema(markerID)
 	if err != nil {
-		fmt.Printf("      WARNING: Could not read schema for %s: %v\n", markerID, err)
+		logger.Log.Warn("could not read schema", "marker", markerID, "error", err)
 		return false
 	}
 
 	if schema == nil {
-		fmt.Printf("      WARNING: No schema found for %s\n", markerID)
-		fmt.Printf("             Run 'marinatemd export' first to generate YAML schemas\n")
+		logger.Log.Warn("no schema found",
+			"marker", markerID,
+			"help", "Run 'marinatemd export' first to generate YAML schemas")
 		return false
 	}
 
 	renderedMarkdown, err := renderer.RenderSchema(schema)
 	if err != nil {
-		fmt.Printf("      WARNING: Could not render markdown for %s: %v\n", markerID, err)
+		logger.Log.Warn("could not render markdown", "marker", markerID, "error", err)
 		return false
 	}
 
 	if injectErr := injector.InjectIntoFile(docsFilePath, markerID, renderedMarkdown); injectErr != nil {
-		fmt.Printf("      WARNING: Could not inject markdown for %s: %v\n", markerID, injectErr)
+		logger.Log.Warn("could not inject markdown", "marker", markerID, "error", injectErr)
 		return false
 	}
 
-	fmt.Printf("      ✓ Injected successfully\n")
+	logger.Log.Info("injected documentation", "marker", markerID)
 	return true
 }
 
 func printInjectSummary(successCount, totalCount int) {
-	fmt.Printf("\nSuccessfully injected %d of %d variable(s)\n", successCount, totalCount)
+	logger.Log.Info("injection complete", "success", successCount, "total", totalCount)
 	if successCount < totalCount {
-		fmt.Println("\nSome variables were not injected. Check warnings above.")
-		fmt.Println("   Run 'marinatemd export' to generate missing YAML schemas")
+		logger.Log.Warn("some variables were not injected",
+			"help", "Run 'marinatemd export' to generate missing YAML schemas")
 	}
 }

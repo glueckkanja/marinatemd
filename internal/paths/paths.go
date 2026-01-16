@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/c4a8-azure/marinatemd/internal/config"
+	"github.com/c4a8-azure/marinatemd/internal/logger"
 )
 
 // SetupEnvironment is a shared function that resolves the module path and loads configuration.
@@ -15,6 +16,7 @@ func SetupEnvironment(args []string) (string, *config.Config, error) {
 	if len(args) > 0 {
 		root = args[0]
 	}
+	logger.Log.Debug("resolving module path", "input", root)
 
 	// filepath.Abs handles both absolute and relative paths correctly:
 	// - Absolute paths (e.g., /srv/bla) are returned as-is
@@ -23,6 +25,7 @@ func SetupEnvironment(args []string) (string, *config.Config, error) {
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to resolve module path: %w", err)
 	}
+	logger.Log.Debug("module path resolved", "absolute", absRoot)
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -36,7 +39,10 @@ func SetupEnvironment(args []string) (string, *config.Config, error) {
 // Uses cfg.ExportPath relative to moduleRoot.
 func ResolveExportPath(moduleRoot string, cfg *config.Config) string {
 	if filepath.IsAbs(cfg.ExportPath) {
+		logger.Log.Debug("using absolute export path", "path", cfg.ExportPath)
 		return cfg.ExportPath
 	}
-	return filepath.Join(moduleRoot, cfg.ExportPath)
+	resolvedPath := filepath.Join(moduleRoot, cfg.ExportPath)
+	logger.Log.Debug("resolved export path", "relative", cfg.ExportPath, "absolute", resolvedPath)
+	return resolvedPath
 }

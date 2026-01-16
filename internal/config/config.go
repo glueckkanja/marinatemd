@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/c4a8-azure/marinatemd/internal/logger"
 	"github.com/c4a8-azure/marinatemd/internal/markdown"
 	"github.com/spf13/viper"
 )
@@ -45,6 +46,8 @@ type SplitConfig struct {
 // Load returns the configuration loaded from viper.
 // This should be called after Viper has been initialized by Cobra.
 func Load() (*Config, error) {
+	logger.Log.Debug("loading configuration")
+
 	cfg := &Config{
 		// Set defaults
 		ExportPath:       "docs",
@@ -59,16 +62,32 @@ func Load() (*Config, error) {
 		},
 	}
 
+	logger.Log.Debug("config defaults set",
+		"export_path", cfg.ExportPath,
+		"docs_file", cfg.DocsFile,
+		"split.output_dir", cfg.Split.OutputDir)
+
 	// Unmarshal viper config into struct
 	if err := viper.Unmarshal(cfg); err != nil {
+		logger.Log.Debug("failed to unmarshal config", "error", err)
 		return nil, err
 	}
+
+	logger.Log.Debug("config loaded from viper",
+		"export_path", cfg.ExportPath,
+		"docs_file", cfg.DocsFile,
+		"split.input_path", cfg.Split.InputPath,
+		"split.output_dir", cfg.Split.OutputDir,
+		"split.header_file", cfg.Split.HeaderFile,
+		"split.footer_file", cfg.Split.FooterFile)
 
 	// Validate markdown template configuration
 	if err := cfg.MarkdownTemplate.Validate(); err != nil {
+		logger.Log.Debug("config validation failed", "error", err)
 		return nil, err
 	}
 
+	logger.Log.Debug("configuration validated successfully")
 	return cfg, nil
 }
 
@@ -76,6 +95,8 @@ func Load() (*Config, error) {
 // SetDefaults sets default configuration values.
 // This should be called during initialization before config file is read.
 func SetDefaults() {
+	logger.Log.Debug("setting viper default values")
+
 	viper.SetDefault("export_path", "docs")
 	viper.SetDefault("docs_file", "README.md")
 	viper.SetDefault("verbose", false)
@@ -94,4 +115,6 @@ func SetDefaults() {
 	viper.SetDefault("split.output_dir", "variables")
 	viper.SetDefault("split.header_file", "")
 	viper.SetDefault("split.footer_file", "")
+
+	logger.Log.Debug("viper defaults configured")
 }
