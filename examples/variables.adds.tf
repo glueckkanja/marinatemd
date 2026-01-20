@@ -131,7 +131,7 @@ DESCRIPTION
               computer_name = optional(string, "")
               size          = optional(string, "")
               image_sku     = optional(string, "")
-              data_disk_size : optional(number, 20)
+              data_disk_size = optional(number, 20)
               dns_servers = optional(list(string), [])
               meta_data = optional(object({
                 tags = optional(map(string))
