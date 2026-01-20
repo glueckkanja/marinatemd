@@ -51,7 +51,6 @@ builds:
 
 archives:
   - id: marinatemd-archive
-    format: tar.gz
     name_template: >-
       {{ .ProjectName }}_
       {{- .Version }}_
@@ -61,47 +60,41 @@ archives:
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
 
-    format_overrides:
-      - goos: windows
-        format: zip
-
     files:
       - README.md
-      - LICENSE
-      - docs/**/*
 
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
   algorithm: sha256
 
 snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ incpatch .Version }}-next"
 
 changelog:
   sort: asc
   use: github
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
-      - '^chore:'
-      - '^ci:'
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
       - Merge pull request
       - Merge branch
   groups:
-    - title: 'Features'
+    - title: "Features"
       regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
       order: 0
-    - title: 'Bug Fixes'
+    - title: "Bug Fixes"
       regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
       order: 1
-    - title: 'Performance Improvements'
+    - title: "Performance Improvements"
       regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
       order: 2
-    - title: 'Refactors'
+    - title: "Refactors"
       regexp: '^.*?refactor(\([[:word:]]+\))??!?:.+$'
       order: 3
-    - title: 'Other Changes'
+    - title: "Other Changes"
       order: 999
 
 # GitHub release configuration
@@ -115,6 +108,9 @@ release:
 
   # Mark as prerelease
   prerelease: auto
+
+  # Make archives available in GitHub releases
+  make_latest: true
 
   # Release name template
   name_template: "Release {{.Version}}"
