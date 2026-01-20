@@ -204,11 +204,13 @@ func (p *Parser) ExtractMarinatedVars() ([]*Variable, error) {
 // Returns the ID and true if found, empty string and false otherwise.
 func ExtractMarinatedID(description string) (string, bool) {
 	// Pattern: <!-- MARINATED: <id> -->
-	// Allow for spaces around the ID
-	re := regexp.MustCompile(`<!--\s*MARINATED:\s*([a-zA-Z0-9_]+)\s*-->`)
+	// Allow for spaces around the ID and handle escaped underscores (\_)
+	re := regexp.MustCompile(`<!--\s*MARINATED:\s*([a-zA-Z0-9_\\]+)\s*-->`)
 	matches := re.FindStringSubmatch(description)
 	if len(matches) >= 2 && strings.TrimSpace(matches[1]) != "" {
-		return strings.TrimSpace(matches[1]), true
+		// Remove backslash escapes from the ID (e.g., configure\_adds\_resources -> configure_adds_resources)
+		id := strings.ReplaceAll(strings.TrimSpace(matches[1]), `\`, "")
+		return id, true
 	}
 	return "", false
 }
