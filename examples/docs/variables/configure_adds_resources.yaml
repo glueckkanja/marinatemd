@@ -12,201 +12,219 @@ schema:
     settings:
         _meta:
             description: '# TODO: Add description for settings'
-        type: object
-        forests:
-            type: list
-            description: '# TODO: Add description for forests'
-            element_type: object
-            config:
-                type: object
-                description: '# TODO: Add description for config'
-                backup_policy:
-                    type: object
-                    description: '# TODO: Add description for backup_policy'
-                    enhanced:
-                        type: bool
-                        description: '# TODO: Add description for enhanced'
-                network:
-                    type: object
-                    description: '# TODO: Add description for network'
-                network_security_rules:
-                    type: object
-                    description: '# TODO: Add description for network_security_rules'
-                    custom_prefixes:
-                        type: any
-                        description: '# TODO: Add description for custom_prefixes'
-                    remote_address_prefixes:
+        children:
+            forests:
+                children:
+                    config:
+                        children:
+                            backup_policy:
+                                children:
+                                    enhanced:
+                                        type: bool
+                                        description: '# TODO: Add description for enhanced'
+                                type: object
+                                description: '# TODO: Add description for backup_policy'
+                            network:
+                                type: object
+                                description: '# TODO: Add description for network'
+                            network_security_rules:
+                                children:
+                                    custom_prefixes:
+                                        type: any
+                                        description: '# TODO: Add description for custom_prefixes'
+                                    remote_address_prefixes:
+                                        type: list
+                                        description: '# TODO: Add description for remote_address_prefixes'
+                                        element_type: string
+                                type: object
+                                description: '# TODO: Add description for network_security_rules'
+                            recovery_service:
+                                children:
+                                    immutability:
+                                        type: string
+                                        description: '# TODO: Add description for immutability'
+                                type: object
+                                description: '# TODO: Add description for recovery_service'
+                        type: object
+                        description: '# TODO: Add description for config'
+                    domains:
+                        children:
+                            config:
+                                children:
+                                    domain_controllers:
+                                        children:
+                                            azure_update:
+                                                children:
+                                                    enabled:
+                                                        type: bool
+                                                        description: '# TODO: Add description for enabled'
+                                                    template:
+                                                        type: string
+                                                        description: '# TODO: Add description for template'
+                                                type: object
+                                                description: '# TODO: Add description for azure_update'
+                                            computer_name:
+                                                type: string
+                                                description: '# TODO: Add description for computer_name'
+                                            data_disk_size:
+                                                type: number
+                                                description: '# TODO: Add description for data_disk_size'
+                                            dns_servers:
+                                                type: list
+                                                description: '# TODO: Add description for dns_servers'
+                                                element_type: string
+                                            enable_boot_diagnostics:
+                                                type: bool
+                                                description: '# TODO: Add description for enable_boot_diagnostics'
+                                            enabled:
+                                                type: bool
+                                                description: '# TODO: Add description for enabled'
+                                            image_sku:
+                                                type: string
+                                                description: '# TODO: Add description for image_sku'
+                                            meta_data:
+                                                children:
+                                                    tags:
+                                                        type: map
+                                                        description: '# TODO: Add description for tags'
+                                                        value_type: string
+                                                type: object
+                                                description: '# TODO: Add description for meta_data'
+                                            name:
+                                                type: string
+                                                description: '# TODO: Add description for name'
+                                            role_assignments:
+                                                children:
+                                                    principal_id:
+                                                        type: string
+                                                        required: true
+                                                        description: '# TODO: Add description for principal_id'
+                                                    role_definition_name:
+                                                        type: string
+                                                        required: true
+                                                        description: '# TODO: Add description for role_definition_name'
+                                                type: list
+                                                description: '# TODO: Add description for role_assignments'
+                                                element_type: object
+                                            size:
+                                                type: string
+                                                description: '# TODO: Add description for size'
+                                            use_enhanced_backup:
+                                                type: bool
+                                                description: '# TODO: Add description for use_enhanced_backup'
+                                            use_trusted_launch:
+                                                type: bool
+                                                description: '# TODO: Add description for use_trusted_launch'
+                                        type: list
+                                        description: '# TODO: Add description for domain_controllers'
+                                        element_type: object
+                                    domain_type:
+                                        type: string
+                                        description: '# TODO: Add description for domain_type'
+                                    network:
+                                        type: object
+                                        description: '# TODO: Add description for network'
+                                    network_security_rules:
+                                        children:
+                                            custom_prefixes:
+                                                type: any
+                                                description: '# TODO: Add description for custom_prefixes'
+                                            remote_address_prefixes:
+                                                type: list
+                                                description: '# TODO: Add description for remote_address_prefixes'
+                                                element_type: string
+                                        type: object
+                                        description: '# TODO: Add description for network_security_rules'
+                                    optional_routes:
+                                        type: list
+                                        description: '# TODO: Add description for optional_routes'
+                                        element_type: string
+                                    parent_domain_name:
+                                        type: string
+                                        description: '# TODO: Add description for parent_domain_name'
+                                    users:
+                                        children:
+                                            customer_role_assignment:
+                                                type: list
+                                                description: '# TODO: Add description for customer_role_assignment'
+                                                element_type: string
+                                        type: object
+                                        description: '# TODO: Add description for users'
+                                type: object
+                                description: '# TODO: Add description for config'
+                            fqdn:
+                                type: string
+                                description: '# TODO: Add description for fqdn'
+                            index:
+                                type: number
+                                description: '# TODO: Add description for index'
+                            netbios_name:
+                                type: string
+                                description: '# TODO: Add description for netbios_name'
                         type: list
-                        description: '# TODO: Add description for remote_address_prefixes'
-                        element_type: string
-                recovery_service:
-                    type: object
-                    description: '# TODO: Add description for recovery_service'
-                    immutability:
-                        type: string
-                        description: '# TODO: Add description for immutability'
-            domains:
-                type: list
-                description: '# TODO: Add description for domains'
-                element_type: object
-                config:
-                    type: object
-                    description: '# TODO: Add description for config'
-                    domain_controllers:
-                        type: list
-                        description: '# TODO: Add description for domain_controllers'
+                        description: '# TODO: Add description for domains'
                         element_type: object
-                        azure_update:
-                            type: object
-                            description: '# TODO: Add description for azure_update'
-                            enabled:
-                                type: bool
-                                description: '# TODO: Add description for enabled'
-                            template:
-                                type: string
-                                description: '# TODO: Add description for template'
-                        computer_name:
-                            type: string
-                            description: '# TODO: Add description for computer_name'
-                        dns_servers:
-                            type: list
-                            description: '# TODO: Add description for dns_servers'
-                            element_type: string
-                        enable_boot_diagnostics:
-                            type: bool
-                            description: '# TODO: Add description for enable_boot_diagnostics'
-                        enabled:
-                            type: bool
-                            description: '# TODO: Add description for enabled'
-                        image_sku:
-                            type: string
-                            description: '# TODO: Add description for image_sku'
-                        meta_data:
-                            type: object
-                            description: '# TODO: Add description for meta_data'
-                            tags:
-                                type: map
-                                description: '# TODO: Add description for tags'
-                                value_type: string
-                        name:
-                            type: string
-                            description: '# TODO: Add description for name'
-                        role_assignments:
-                            type: list
-                            description: '# TODO: Add description for role_assignments'
-                            element_type: object
-                            principal_id:
-                                type: string
-                                required: true
-                                description: '# TODO: Add description for principal_id'
-                            role_definition_name:
-                                type: string
-                                required: true
-                                description: '# TODO: Add description for role_definition_name'
-                        size:
-                            type: string
-                            description: '# TODO: Add description for size'
-                        use_enhanced_backup:
-                            type: bool
-                            description: '# TODO: Add description for use_enhanced_backup'
-                        use_trusted_launch:
-                            type: bool
-                            description: '# TODO: Add description for use_trusted_launch'
-                    domain_type:
+                    enabled:
+                        type: bool
+                        description: '# TODO: Add description for enabled'
+                    fqdn:
                         type: string
-                        description: '# TODO: Add description for domain_type'
-                    network:
-                        type: object
-                        description: '# TODO: Add description for network'
-                    network_security_rules:
-                        type: object
-                        description: '# TODO: Add description for network_security_rules'
-                        custom_prefixes:
-                            type: any
-                            description: '# TODO: Add description for custom_prefixes'
-                        remote_address_prefixes:
-                            type: list
-                            description: '# TODO: Add description for remote_address_prefixes'
-                            element_type: string
-                    optional_routes:
-                        type: list
-                        description: '# TODO: Add description for optional_routes'
-                        element_type: string
-                    parent_domain_name:
+                        description: '# TODO: Add description for fqdn'
+                    index:
+                        type: number
+                        description: '# TODO: Add description for index'
+                    netbios_name:
                         type: string
-                        description: '# TODO: Add description for parent_domain_name'
-                    users:
-                        type: object
-                        description: '# TODO: Add description for users'
-                        customer_role_assignment:
-                            type: list
-                            description: '# TODO: Add description for customer_role_assignment'
-                            element_type: string
-                fqdn:
-                    type: string
-                    description: '# TODO: Add description for fqdn'
-                index:
-                    type: number
-                    description: '# TODO: Add description for index'
-                netbios_name:
-                    type: string
-                    description: '# TODO: Add description for netbios_name'
-            enabled:
-                type: bool
-                description: '# TODO: Add description for enabled'
-            fqdn:
-                type: string
-                description: '# TODO: Add description for fqdn'
-            index:
-                type: number
-                description: '# TODO: Add description for index'
-            netbios_name:
-                type: string
-                description: '# TODO: Add description for netbios_name'
-            test:
-                type: string
-                description: '# TODO: Add description for test'
-        maintenance_templates:
-            type: list
-            description: '# TODO: Add description for maintenance_templates'
-            element_type: object
-            classifications_to_include:
+                        description: '# TODO: Add description for netbios_name'
+                    test:
+                        type: string
+                        description: '# TODO: Add description for test'
                 type: list
-                description: '# TODO: Add description for classifications_to_include'
-                element_type: string
-            duration:
-                type: string
-                description: '# TODO: Add description for duration'
-            expiration_date_time:
-                type: string
-                description: '# TODO: Add description for expiration_date_time'
-            in_guest_user_patch_mode:
-                type: string
-                description: '# TODO: Add description for in_guest_user_patch_mode'
-            name:
-                type: string
-                required: true
-                description: '# TODO: Add description for name'
-            reboot:
-                type: string
-                description: '# TODO: Add description for reboot'
-            recur_every:
-                type: string
-                required: true
-                description: '# TODO: Add description for recur_every'
-            scope:
-                type: string
-                description: '# TODO: Add description for scope'
-            start_date_time:
-                type: string
-                required: true
-                description: '# TODO: Add description for start_date_time'
-            time_zone:
-                type: string
-                description: '# TODO: Add description for time_zone'
-            visibility:
-                type: string
-                description: '# TODO: Add description for visibility'
+                description: '# TODO: Add description for forests'
+                element_type: object
+            maintenance_templates:
+                children:
+                    classifications_to_include:
+                        type: list
+                        description: '# TODO: Add description for classifications_to_include'
+                        element_type: string
+                    duration:
+                        type: string
+                        description: '# TODO: Add description for duration'
+                    expiration_date_time:
+                        type: string
+                        description: '# TODO: Add description for expiration_date_time'
+                    in_guest_user_patch_mode:
+                        type: string
+                        description: '# TODO: Add description for in_guest_user_patch_mode'
+                    name:
+                        type: string
+                        required: true
+                        description: '# TODO: Add description for name'
+                    reboot:
+                        type: string
+                        description: '# TODO: Add description for reboot'
+                    recur_every:
+                        type: string
+                        required: true
+                        description: '# TODO: Add description for recur_every'
+                    scope:
+                        type: string
+                        description: '# TODO: Add description for scope'
+                    start_date_time:
+                        type: string
+                        required: true
+                        description: '# TODO: Add description for start_date_time'
+                    time_zone:
+                        type: string
+                        description: '# TODO: Add description for time_zone'
+                    visibility:
+                        type: string
+                        description: '# TODO: Add description for visibility'
+                type: list
+                description: '# TODO: Add description for maintenance_templates'
+                element_type: object
+        type: object
     tags:
         _meta:
             description: '# TODO: Add description for tags'

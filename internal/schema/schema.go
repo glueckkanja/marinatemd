@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/c4a8-azure/marinatemd/internal/hclparse"
+	"gopkg.in/yaml.v3"
 )
 
 // Common errors.
@@ -26,7 +27,7 @@ type Schema struct {
 // According to Option B: nodes can have both leaf fields AND children for nested objects.
 type Node struct {
 	Meta     *MetaInfo        `yaml:"_meta,omitempty"`
-	Children map[string]*Node `yaml:",inline"` // Inline children at same level as other fields
+	Children map[string]*Node `yaml:"children,omitempty"` // Children nodes (not inlined to avoid field name conflicts)
 
 	// Fields present at both leaf AND parent nodes
 	Type        string `yaml:"type,omitempty"`        // Type information (string, number, bool, object, list, map, etc.)
@@ -42,6 +43,62 @@ type Node struct {
 // MetaInfo contains metadata for complex objects (non-leaf nodes).
 type MetaInfo struct {
 	Description string `yaml:"description,omitempty"`
+}
+
+// UnmarshalYAML implements custom YAML unmarshaling for Node.
+// This handles both the new format (with explicit "children" key) and
+// the old format (with inline children) for backward compatibility.
+func (n *Node) UnmarshalYAML(value *yaml.Node) error {
+	// Define a type alias to avoid recursion
+	type nodeAlias Node
+	
+	// First, try to unmarshal using the standard struct approach
+	var aux nodeAlias
+	if err := value.Decode(&aux); err != nil {
+		return err
+	}
+	
+	// Copy the decoded fields to the actual node
+	*n = Node(aux)
+	
+	// If Children is nil, initialize it
+	if n.Children == nil {
+		n.Children = make(map[string]*Node)
+	}
+	
+	// Now check if there are any additional fields at the same level
+	// that are not standard fields - these would be inline children from old format
+	if value.Kind == yaml.MappingNode {
+		knownFields := map[string]bool{
+			"_meta":        true,
+			"children":     true,
+			"type":         true,
+			"required":     true,
+			"description":  true,
+			"example":      true,
+			"element_type": true,
+			"value_type":   true,
+		}
+		
+		// Iterate through the mapping node to find inline children
+		for i := 0; i < len(value.Content); i += 2 {
+			keyNode := value.Content[i]
+			valueNode := value.Content[i+1]
+			
+			fieldName := keyNode.Value
+			
+			// If this is not a known field, it's an inline child (old format)
+			if !knownFields[fieldName] {
+				var childNode Node
+				if err := valueNode.Decode(&childNode); err != nil {
+					return fmt.Errorf("failed to decode inline child %s: %w", fieldName, err)
+				}
+				n.Children[fieldName] = &childNode
+			}
+		}
+	}
+	
+	return nil
 }
 
 // Builder creates schema models from parsed HCL variables.

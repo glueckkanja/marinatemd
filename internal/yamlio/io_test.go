@@ -287,3 +287,85 @@ func TestWriter_PreserveExistingDescriptions(t *testing.T) {
 		t.Errorf("expected host description to be preserved, got %v", host.Description)
 	}
 }
+
+// TestWriter_FieldNamedDescription tests that we can write and read
+// a schema with a field named "description" without conflicts.
+func TestWriter_FieldNamedDescription(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a schema with a node that has a child named "description"
+	originalSchema := &schema.Schema{
+		Variable: "ssh_config",
+		Version:  "1",
+		SchemaNodes: map[string]*schema.Node{
+			"ssh_authorized_key": {
+				Type:        "list",
+				ElementType: "object",
+				Required:    false,
+				Meta: &schema.MetaInfo{
+					Description: "SSH authorized keys configuration",
+				},
+				Children: map[string]*schema.Node{
+					"description": {
+						Type:        "string",
+						Required:    false,
+						Description: "Description of the SSH key",
+					},
+					"key": {
+						Type:        "string",
+						Required:    true,
+						Description: "The SSH public key",
+					},
+				},
+			},
+		},
+	}
+
+	// Write the schema
+	writer := yamlio.NewWriter(tmpDir)
+	if err := writer.WriteSchema(originalSchema); err != nil {
+		t.Fatalf("WriteSchema() error = %v", err)
+	}
+
+	// Read the YAML file content for inspection
+	yamlPath := filepath.Join(tmpDir, "variables", "ssh_config.yaml")
+	content, err := os.ReadFile(yamlPath)
+	if err != nil {
+		t.Fatalf("failed to read YAML file: %v", err)
+	}
+	t.Logf("Generated YAML:\n%s", string(content))
+
+	// Read it back
+	reader := yamlio.NewReader(tmpDir)
+	readSchema, err := reader.ReadSchema("ssh_config")
+	if err != nil {
+		t.Fatalf("ReadSchema() error = %v", err)
+	}
+
+	// Verify the schema structure
+	sshKey := readSchema.SchemaNodes["ssh_authorized_key"]
+	if sshKey == nil {
+		t.Fatal("expected ssh_authorized_key node")
+	}
+
+	// Verify the "description" child exists
+	desc, ok := sshKey.Children["description"]
+	if !ok {
+		t.Fatal("expected 'description' child")
+	}
+	if desc.Type != "string" {
+		t.Errorf("expected type 'string', got %v", desc.Type)
+	}
+	if desc.Description != "Description of the SSH key" {
+		t.Errorf("expected description preserved, got %v", desc.Description)
+	}
+
+	// Verify the "key" child exists
+	key, ok := sshKey.Children["key"]
+	if !ok {
+		t.Fatal("expected 'key' child")
+	}
+	if !key.Required {
+		t.Error("expected key to be required")
+	}
+}
