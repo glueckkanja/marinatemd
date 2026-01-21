@@ -51,21 +51,21 @@ type MetaInfo struct {
 func (n *Node) UnmarshalYAML(value *yaml.Node) error {
 	// Define a type alias to avoid recursion
 	type nodeAlias Node
-	
+
 	// First, try to unmarshal using the standard struct approach
 	var aux nodeAlias
 	if err := value.Decode(&aux); err != nil {
 		return err
 	}
-	
+
 	// Copy the decoded fields to the actual node
 	*n = Node(aux)
-	
+
 	// If Children is nil, initialize it
 	if n.Children == nil {
 		n.Children = make(map[string]*Node)
 	}
-	
+
 	// Now check if there are any additional fields at the same level
 	// that are not standard fields - these would be inline children from old format
 	if value.Kind == yaml.MappingNode {
@@ -79,14 +79,14 @@ func (n *Node) UnmarshalYAML(value *yaml.Node) error {
 			"element_type": true,
 			"value_type":   true,
 		}
-		
+
 		// Iterate through the mapping node to find inline children
 		for i := 0; i < len(value.Content); i += 2 {
 			keyNode := value.Content[i]
 			valueNode := value.Content[i+1]
-			
+
 			fieldName := keyNode.Value
-			
+
 			// If this is not a known field, it's an inline child (old format)
 			if !knownFields[fieldName] {
 				var childNode Node
@@ -97,7 +97,7 @@ func (n *Node) UnmarshalYAML(value *yaml.Node) error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
