@@ -11,14 +11,15 @@ The following input variables are supported:
 Description: <!-- MARINATED: app\_config -->
 
 - `cache` - (Optional) # TODO: Add description for cache
-  - `redis_url` - (Required) # TODO: Add description for redis_url
+  - `redis_url` - (Required) # TODO: Add description for redis\_url
   - `ttl` - (Optional) # TODO: Add description for ttl
 - `database` - (Optional) # TODO: Add description for database
   - `host` - (Required) # TODO: Add description for host
   - `port` - (Optional) # TODO: Add description for port
-  - `ssl_mode` - (Optional) # TODO: Add description for ssl_mode
+  - `ssl_mode` - (Optional) # TODO: Add description for ssl\_mode
 
 <!-- /MARINATED: app\_config -->
+
 Type:
 
 ```hcl
@@ -84,6 +85,170 @@ Description: (Optional) Restrict copy to and from Storage Accounts within an AAD
 Type: `string`
 
 Default: `null`
+
+### configure\_adds\_resources
+
+Description: Configures the adds resources for the AzERE deployment.
+
+### Attributes
+
+<!-- MARINATED: configure\\_adds\\_resources -->
+
+- `advanced` - (Optional)
+- `location` - (Optional)
+- `settings` - (Optional) # TODO: Add description for settings
+  - `forests` - (Optional) # TODO: Add description for forests
+    - `config` - (Optional) # TODO: Add description for config
+      - `backup_policy` - (Optional) # TODO: Add description for backup\_policy
+        - `enhanced` - (Optional) # TODO: Add description for enhanced
+      - `network` - (Optional) # TODO: Add description for network
+      - `network_security_rules` - (Optional) # TODO: Add description for network\_security\_rules
+        - `custom_prefixes` - (Optional) # TODO: Add description for custom\_prefixes
+        - `remote_address_prefixes` - (Optional) # TODO: Add description for remote\_address\_prefixes
+      - `recovery_service` - (Optional) # TODO: Add description for recovery\_service
+        - `immutability` - (Optional) # TODO: Add description for immutability
+    - `domains` - (Optional) # TODO: Add description for domains
+      - `config` - (Optional) # TODO: Add description for config
+        - `domain_controllers` - (Optional) # TODO: Add description for domain\_controllers
+          - `azure_update` - (Optional) # TODO: Add description for azure\_update
+            - `enabled` - (Optional) # TODO: Add description for enabled
+            - `template` - (Optional) # TODO: Add description for template
+          - `computer_name` - (Optional) # TODO: Add description for computer\_name
+          - `dns_servers` - (Optional) # TODO: Add description for dns\_servers
+          - `enable_boot_diagnostics` - (Optional) # TODO: Add description for enable\_boot\_diagnostics
+          - `enabled` - (Optional) # TODO: Add description for enabled
+          - `image_sku` - (Optional) # TODO: Add description for image\_sku
+          - `meta_data` - (Optional) # TODO: Add description for meta\_data
+            - `tags` - (Optional) # TODO: Add description for tags
+          - `name` - (Optional) # TODO: Add description for name
+          - `role_assignments` - (Optional) # TODO: Add description for role\_assignments
+            - `principal_id` - (Required) # TODO: Add description for principal\_id
+            - `role_definition_name` - (Required) # TODO: Add description for role\_definition\_name
+          - `size` - (Optional) # TODO: Add description for size
+          - `use_enhanced_backup` - (Optional) # TODO: Add description for use\_enhanced\_backup
+          - `use_trusted_launch` - (Optional) # TODO: Add description for use\_trusted\_launch
+        - `domain_type` - (Optional) # TODO: Add description for domain\_type
+        - `network` - (Optional) # TODO: Add description for network
+        - `network_security_rules` - (Optional) # TODO: Add description for network\_security\_rules
+          - `custom_prefixes` - (Optional) # TODO: Add description for custom\_prefixes
+          - `remote_address_prefixes` - (Optional) # TODO: Add description for remote\_address\_prefixes
+        - `optional_routes` - (Optional) # TODO: Add description for optional\_routes
+        - `parent_domain_name` - (Optional) # TODO: Add description for parent\_domain\_name
+        - `users` - (Optional) # TODO: Add description for users
+          - `customer_role_assignment` - (Optional) # TODO: Add description for customer\_role\_assignment
+      - `fqdn` - (Optional) # TODO: Add description for fqdn
+      - `index` - (Optional) # TODO: Add description for index
+      - `netbios_name` - (Optional) # TODO: Add description for netbios\_name
+    - `enabled` - (Optional) # TODO: Add description for enabled
+    - `fqdn` - (Optional) # TODO: Add description for fqdn
+    - `index` - (Optional) # TODO: Add description for index
+    - `netbios_name` - (Optional) # TODO: Add description for netbios\_name
+    - `test` - (Optional) # TODO: Add description for test
+  - `maintenance_templates` - (Optional) # TODO: Add description for maintenance\_templates
+    - `classifications_to_include` - (Optional) # TODO: Add description for classifications\_to\_include
+    - `duration` - (Optional) # TODO: Add description for duration
+    - `expiration_date_time` - (Optional) # TODO: Add description for expiration\_date\_time
+    - `in_guest_user_patch_mode` - (Optional) # TODO: Add description for in\_guest\_user\_patch\_mode
+    - `name` - (Required) # TODO: Add description for name
+    - `reboot` - (Optional) # TODO: Add description for reboot
+    - `recur_every` - (Required) # TODO: Add description for recur\_every
+    - `scope` - (Optional) # TODO: Add description for scope
+    - `start_date_time` - (Required) # TODO: Add description for start\_date\_time
+    - `time_zone` - (Optional) # TODO: Add description for time\_zone
+    - `visibility` - (Optional) # TODO: Add description for visibility
+- `tags` - (Optional)
+
+<!-- /MARINATED: configure\\_adds\\_resources -->
+
+Type:
+
+```hcl
+object({
+    settings = optional(object({
+      maintenance_templates = optional(list(object({
+        name                       = string
+        scope                      = optional(string, "InGuestPatch")
+        in_guest_user_patch_mode   = optional(string, "User")
+        visibility                 = optional(string, "Custom")
+        start_date_time            = string
+        expiration_date_time       = optional(string)
+        duration                   = optional(string, "02:00")
+        time_zone                  = optional(string, "UTC")
+        recur_every                = string
+        reboot                     = optional(string, "IfRequired")
+        classifications_to_include = optional(list(string), ["Critical", "Security"])
+      })), [])
+      forests = optional(list(object({
+        enabled      = optional(bool, true)
+        test         = optional(string, "")
+        netbios_name = optional(string, "")
+        fqdn         = optional(string, "")
+        index        = optional(number, 1)
+        config = optional(object({
+          recovery_service = optional(object({
+            immutability = optional(string)
+          }), {})
+          backup_policy = optional(object({
+            enhanced = optional(bool, false)
+          }), {})
+          network = optional(object({
+          }), {})
+          network_security_rules = optional(object({
+            remote_address_prefixes = optional(list(string))
+            custom_prefixes         = optional(any)
+          }), {})
+        }), {})
+        domains = optional(list(object({
+          netbios_name = optional(string, "")
+          fqdn         = optional(string, "")
+          index        = optional(number, 1)
+          config = optional(object({
+            domain_type        = optional(string, "")
+            parent_domain_name = optional(string, "")
+            network = optional(object({
+            }), {})
+            network_security_rules = optional(object({
+              remote_address_prefixes = optional(list(string))
+              custom_prefixes         = optional(any)
+            }), {})
+            users = optional(object({
+              customer_role_assignment = optional(list(string), [])
+            }), {})
+            optional_routes = optional(list(string), [])
+            domain_controllers = optional(list(object({
+              enabled       = optional(bool, true)
+              name          = optional(string, "")
+              computer_name = optional(string, "")
+              size          = optional(string, "")
+              image_sku     = optional(string, "")
+              data_disk_size = optional(number, 20)
+              dns_servers = optional(list(string), [])
+              meta_data = optional(object({
+                tags = optional(map(string))
+              }), {})
+              use_enhanced_backup     = optional(bool, false)
+              use_trusted_launch      = optional(bool, false)
+              enable_boot_diagnostics = optional(bool, false)
+              azure_update = optional(object({
+                enabled  = optional(bool, false)
+                template = optional(string, "")
+              }), {})
+              role_assignments = optional(list(object({
+                role_definition_name = string
+                principal_id         = string
+              })), []),
+            })))
+          }), {})
+        })), [])
+      })), [])
+    }), {})
+    location = optional(string, "")
+    tags     = optional(any, {})
+    advanced = optional(any, {})
+  })
+```
+
+Default: `{}`
 
 ### cross\_tenant\_replication\_enabled
 
@@ -377,3 +542,7 @@ object({
 ```
 
 Default: `null`
+
+---
+
+Generated by MarinateMD

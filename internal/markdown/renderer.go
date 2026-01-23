@@ -68,54 +68,33 @@ func (r *Renderer) renderNode(name string, node *schema.Node, depth int, builder
 		return nil
 	}
 
-	// Decide whether this node should be rendered as an attribute entry.
-	//
-	// - Nodes with an explicit description are always rendered as attributes,
-	//   even if they have children.
-	// - Leaf nodes (no children) are rendered as attributes so their type and
-	//   required/default metadata are visible even without a description.
-	hasDescription := node.Description != ""
-	isLeaf := len(node.Children) == 0
-
-	if hasDescription || isLeaf {
+	// Render this node if it has documentation in Marinate
+	if node.Marinate != nil && node.Marinate.Description != "" {
 		ctx := TemplateContext{
 			Attribute:   name,
 			Required:    node.Required,
-			Description: node.Description,
+			Description: node.Marinate.Description,
 			Type:        node.Type,
 		}
 
 		indent := r.templateCfg.FormatIndent(depth)
-		rendered := r.templateCfg.RenderAttribute(ctx)
-		builder.WriteString(indent)
-		builder.WriteString(rendered)
-		builder.WriteString("\n")
-	} else if node.Meta != nil && node.Meta.Description != "" {
-		// For complex objects with only meta description, render the meta
-		indent := r.templateCfg.FormatIndent(depth)
-		ctx := TemplateContext{
-			Attribute:   name,
-			Required:    node.Required,
-			Description: node.Meta.Description,
-			Type:        node.Type,
-		}
 		rendered := r.templateCfg.RenderAttribute(ctx)
 		builder.WriteString(indent)
 		builder.WriteString(rendered)
 		builder.WriteString("\n")
 	}
 
-	// Render children recursively
-	if len(node.Children) > 0 {
-		childNames := make([]string, 0, len(node.Children))
-		for childName := range node.Children {
-			childNames = append(childNames, childName)
+	// Render child attributes recursively
+	if len(node.Attributes) > 0 {
+		attrNames := make([]string, 0, len(node.Attributes))
+		for attrName := range node.Attributes {
+			attrNames = append(attrNames, attrName)
 		}
-		sort.Strings(childNames)
+		sort.Strings(attrNames)
 
-		for _, childName := range childNames {
-			child := node.Children[childName]
-			if err := r.renderNode(childName, child, depth+1, builder); err != nil {
+		for _, attrName := range attrNames {
+			attr := node.Attributes[attrName]
+			if err := r.renderNode(attrName, attr, depth+1, builder); err != nil {
 				return err
 			}
 		}

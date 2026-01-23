@@ -2,29 +2,32 @@ variable: app_config
 version: "1"
 schema:
     cache:
-        _meta:
+        _marinate:
             description: '# TODO: Add description for cache'
-        children:
-            redis_url:
-                type: string
-                required: true
+        type: object
+        redis_url:
+            _marinate:
                 description: '# TODO: Add description for redis_url'
-            ttl:
-                type: number
+            type: string
+            required: true
+        ttl:
+            _marinate:
                 description: '# TODO: Add description for ttl'
-        type: object
+            type: number
     database:
-        _meta:
+        _marinate:
             description: '# TODO: Add description for database'
-        children:
-            host:
-                type: string
-                required: true
-                description: '# TODO: Add description for host'
-            port:
-                type: number
-                description: '# TODO: Add description for port'
-            ssl_mode:
-                type: string
-                description: '# TODO: Add description for ssl_mode'
         type: object
+        host:
+            _marinate:
+                description: '# TODO: Add description for host'
+            type: string
+            required: true
+        port:
+            _marinate:
+                description: '# TODO: Add description for port'
+            type: number
+        ssl_mode:
+            _marinate:
+                description: '# TODO: Add description for ssl_mode'
+            type: string

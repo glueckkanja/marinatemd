@@ -43,9 +43,10 @@ func TestBuildFromHCL_SimpleTypes(t *testing.T) {
 						Type:        "list",
 						ElementType: "string",
 						Required:    true,
-						Meta: &schema.MetaInfo{
+						Marinate: &schema.MarinateInfo{
 							Description: "# TODO: Add description for tags",
 						},
+						Attributes: map[string]*schema.Node{},
 					},
 				},
 			},
@@ -113,17 +114,17 @@ func TestBuildFromHCL_ComplexObject(t *testing.T) {
 	}
 
 	// Database should have _meta
-	if database.Meta == nil {
-		t.Error("expected database to have _meta")
+	if database.Marinate == nil {
+		t.Error("expected database to have _marinate")
 	}
 
-	// Database should have children (host, port, ssl_mode)
-	if len(database.Children) == 0 {
-		t.Fatal("expected database to have children")
+	// Database should have attributes (host, port, ssl_mode)
+	if len(database.Attributes) == 0 {
+		t.Fatal("expected database to have attributes")
 	}
 
 	// Check host field
-	host, ok := database.Children["host"]
+	host, ok := database.Attributes["host"]
 	if !ok {
 		t.Fatal("expected 'host' field in database")
 	}
@@ -135,7 +136,7 @@ func TestBuildFromHCL_ComplexObject(t *testing.T) {
 	}
 
 	// Check port field
-	port, ok := database.Children["port"]
+	port, ok := database.Attributes["port"]
 	if !ok {
 		t.Fatal("expected 'port' field in database")
 	}
@@ -211,13 +212,13 @@ func TestBuildFromHCL_NestedOptionalObjects(t *testing.T) {
 		t.Errorf("expected element_type 'object', got %v", pla.ElementType)
 	}
 
-	// Should have children for the object structure
-	if len(pla.Children) == 0 {
-		t.Fatal("expected private_link_access to have children describing object structure")
+	// Should have attributes for the object structure
+	if len(pla.Attributes) == 0 {
+		t.Fatal("expected private_link_access to have attributes describing object structure")
 	}
 
 	// Check endpoint_resource_id
-	eri, ok := pla.Children["endpoint_resource_id"]
+	eri, ok := pla.Attributes["endpoint_resource_id"]
 	if !ok {
 		t.Fatal("expected 'endpoint_resource_id' in children")
 	}
@@ -229,7 +230,7 @@ func TestBuildFromHCL_NestedOptionalObjects(t *testing.T) {
 	}
 
 	// Check endpoint_tenant_id
-	eti, ok := pla.Children["endpoint_tenant_id"]
+	eti, ok := pla.Attributes["endpoint_tenant_id"]
 	if !ok {
 		t.Fatal("expected 'endpoint_tenant_id' in children")
 	}
@@ -250,19 +251,25 @@ func TestMergeWithExisting_PreserveDescriptions(t *testing.T) {
 			"database": {
 				Type:     "object",
 				Required: false,
-				Meta: &schema.MetaInfo{
+				Marinate: &schema.MarinateInfo{
 					Description: "User-written description for database",
 				},
-				Children: map[string]*schema.Node{
+				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:        "string",
-						Required:    true,
-						Description: "The database hostname",
+						Type:     "string",
+						Required: true,
+						Marinate: &schema.MarinateInfo{
+							Description: "The database hostname",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 					"port": {
-						Type:        "number",
-						Required:    false,
-						Description: "The database port number",
+						Type:     "number",
+						Required: false,
+						Marinate: &schema.MarinateInfo{
+							Description: "The database port number",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 				},
 			},
@@ -277,19 +284,25 @@ func TestMergeWithExisting_PreserveDescriptions(t *testing.T) {
 			"database": {
 				Type:     "object",
 				Required: false,
-				Meta: &schema.MetaInfo{
+				Marinate: &schema.MarinateInfo{
 					Description: "# TODO: Add description for database",
 				},
-				Children: map[string]*schema.Node{
+				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:        "string",
-						Required:    true,
-						Description: "# TODO: Add description for host",
+						Type:     "string",
+						Required: true,
+						Marinate: &schema.MarinateInfo{
+							Description: "# TODO: Add description for host",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 					"port": {
-						Type:        "number",
-						Required:    false,
-						Description: "# TODO: Add description for port",
+						Type:     "number",
+						Required: false,
+						Marinate: &schema.MarinateInfo{
+							Description: "# TODO: Add description for port",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 				},
 			},
@@ -304,13 +317,21 @@ func TestMergeWithExisting_PreserveDescriptions(t *testing.T) {
 
 	// Check that user descriptions are preserved
 	db := merged.SchemaNodes["database"]
-	if db.Meta.Description != "User-written description for database" {
-		t.Errorf("expected user description to be preserved, got %v", db.Meta.Description)
+	if db.Marinate == nil || db.Marinate.Description != "User-written description for database" {
+		if db.Marinate == nil {
+			t.Error("expected database to have Marinate")
+		} else {
+			t.Errorf("expected user description to be preserved, got %v", db.Marinate.Description)
+		}
 	}
 
-	host := db.Children["host"]
-	if host.Description != "The database hostname" {
-		t.Errorf("expected user description to be preserved, got %v", host.Description)
+	host := db.Attributes["host"]
+	if host.Marinate == nil || host.Marinate.Description != "The database hostname" {
+		if host.Marinate == nil {
+			t.Error("expected host to have Marinate")
+		} else {
+			t.Errorf("expected user description to be preserved, got %v", host.Marinate.Description)
+		}
 	}
 }
 
@@ -323,11 +344,14 @@ func TestMergeWithExisting_AddNewFields(t *testing.T) {
 			"database": {
 				Type:     "object",
 				Required: false,
-				Children: map[string]*schema.Node{
+				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:        "string",
-						Required:    true,
-						Description: "The database hostname",
+						Type:     "string",
+						Required: true,
+						Marinate: &schema.MarinateInfo{
+							Description: "The database hostname",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 				},
 			},
@@ -342,16 +366,22 @@ func TestMergeWithExisting_AddNewFields(t *testing.T) {
 			"database": {
 				Type:     "object",
 				Required: false,
-				Children: map[string]*schema.Node{
+				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:        "string",
-						Required:    true,
-						Description: "# TODO: Add description for host",
+						Type:     "string",
+						Required: true,
+						Marinate: &schema.MarinateInfo{
+							Description: "# TODO: Add description for host",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 					"port": {
-						Type:        "number",
-						Required:    false,
-						Description: "# TODO: Add description for port",
+						Type:     "number",
+						Required: false,
+						Marinate: &schema.MarinateInfo{
+							Description: "# TODO: Add description for port",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 				},
 			},
@@ -366,12 +396,12 @@ func TestMergeWithExisting_AddNewFields(t *testing.T) {
 
 	// Check that new field is added
 	db := merged.SchemaNodes["database"]
-	if _, ok := db.Children["port"]; !ok {
+	if _, ok := db.Attributes["port"]; !ok {
 		t.Error("expected new 'port' field to be added")
 	}
 
 	// Check that existing description is preserved
-	if db.Children["host"].Description != "The database hostname" {
+	if db.Attributes["host"].Marinate == nil || db.Attributes["host"].Marinate.Description != "The database hostname" {
 		t.Error("expected existing description to be preserved")
 	}
 }
@@ -385,16 +415,22 @@ func TestMergeWithExisting_RemoveDeletedFields(t *testing.T) {
 			"database": {
 				Type:     "object",
 				Required: false,
-				Children: map[string]*schema.Node{
+				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:        "string",
-						Required:    true,
-						Description: "The database hostname",
+						Type:     "string",
+						Required: true,
+						Marinate: &schema.MarinateInfo{
+							Description: "The database hostname",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 					"old_field": {
-						Type:        "string",
-						Required:    false,
-						Description: "This field no longer exists in HCL",
+						Type:     "string",
+						Required: false,
+						Marinate: &schema.MarinateInfo{
+							Description: "This field no longer exists in HCL",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 				},
 			},
@@ -409,11 +445,14 @@ func TestMergeWithExisting_RemoveDeletedFields(t *testing.T) {
 			"database": {
 				Type:     "object",
 				Required: false,
-				Children: map[string]*schema.Node{
+				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:        "string",
-						Required:    true,
-						Description: "# TODO: Add description for host",
+						Type:     "string",
+						Required: true,
+						Marinate: &schema.MarinateInfo{
+							Description: "# TODO: Add description for host",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 				},
 			},
@@ -428,12 +467,12 @@ func TestMergeWithExisting_RemoveDeletedFields(t *testing.T) {
 
 	// Check that old field is removed
 	db := merged.SchemaNodes["database"]
-	if _, ok := db.Children["old_field"]; ok {
+	if _, ok := db.Attributes["old_field"]; ok {
 		t.Error("expected 'old_field' to be removed")
 	}
 
 	// Check that existing field is preserved
-	if _, ok := db.Children["host"]; !ok {
+	if _, ok := db.Attributes["host"]; !ok {
 		t.Error("expected 'host' field to be preserved")
 	}
 }

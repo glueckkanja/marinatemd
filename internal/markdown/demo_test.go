@@ -16,19 +16,28 @@ func TestDemo_NetworkRulesExample(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"bypass": {
-				Type:        "set(string)",
-				Required:    false,
-				Description: "Specifies whether traffic is bypassed for Logging/Metrics/AzureServices. Valid options are any combination of `Logging`, `Metrics`, `AzureServices`, or `None`.",
+				Type:     "set(string)",
+				Required: false,
+				Marinate: &schema.MarinateInfo{
+					Description: "Specifies whether traffic is bypassed for Logging/Metrics/AzureServices. Valid options are any combination of `Logging`, `Metrics`, `AzureServices`, or `None`.",
+				},
+				Attributes: map[string]*schema.Node{},
 			},
 			"default_action": {
-				Type:        "string",
-				Required:    true,
-				Description: "Specifies the default action of allow or deny when no other rules match. Valid options are `Deny` or `Allow`.",
+				Type:     "string",
+				Required: true,
+				Marinate: &schema.MarinateInfo{
+					Description: "Specifies the default action of allow or deny when no other rules match. Valid options are `Deny` or `Allow`.",
+				},
+				Attributes: map[string]*schema.Node{},
 			},
 			"ip_rules": {
-				Type:        "set(string)",
-				Required:    false,
-				Description: "List of public IP or IP ranges in CIDR Format. Only IPv4 addresses are allowed.",
+				Type:     "set(string)",
+				Required: false,
+				Marinate: &schema.MarinateInfo{
+					Description: "List of public IP or IP ranges in CIDR Format. Only IPv4 addresses are allowed.",
+				},
+				Attributes: map[string]*schema.Node{},
 			},
 		},
 	}
@@ -57,9 +66,12 @@ func TestDemo_CustomTemplateExample(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"bypass": {
-				Type:        "set(string)",
-				Required:    false,
-				Description: "Specifies whether traffic is bypassed for Logging/Metrics/AzureServices.",
+				Type:     "set(string)",
+				Required: false,
+				Marinate: &schema.MarinateInfo{
+					Description: "Specifies whether traffic is bypassed for Logging/Metrics/AzureServices.",
+				},
+				Attributes: map[string]*schema.Node{},
 			},
 		},
 	}

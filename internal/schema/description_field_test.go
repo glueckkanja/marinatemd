@@ -49,10 +49,10 @@ func TestBuildFromHCL_FieldNamedDescription(t *testing.T) {
 		t.Errorf("expected element_type 'object', got %v", sshKey.ElementType)
 	}
 
-	// Check that it has the "description" child
-	description, ok := sshKey.Children["description"]
+	// Check that it has the "description" attribute
+	description, ok := sshKey.Attributes["description"]
 	if !ok {
-		t.Fatal("expected 'description' field in ssh_authorized_key children")
+		t.Fatal("expected 'description' field in ssh_authorized_key attributes")
 	}
 
 	// description field should be optional string
@@ -63,10 +63,10 @@ func TestBuildFromHCL_FieldNamedDescription(t *testing.T) {
 		t.Errorf("expected type 'string', got %v", description.Type)
 	}
 
-	// Check that it has the "key" child
-	key, ok := sshKey.Children["key"]
+	// Check that it has the "key" attribute
+	key, ok := sshKey.Attributes["key"]
 	if !ok {
-		t.Fatal("expected 'key' field in ssh_authorized_key children")
+		t.Fatal("expected 'key' field in ssh_authorized_key attributes")
 	}
 	if !key.Required {
 		t.Error("expected key to be required")
@@ -88,17 +88,25 @@ func TestYAMLMarshalUnmarshal_FieldNamedDescription(t *testing.T) {
 				Type:        "list",
 				ElementType: "object",
 				Required:    false,
-				Description: "List of SSH keys",
-				Children: map[string]*schema.Node{
+				Marinate: &schema.MarinateInfo{
+					Description: "List of SSH keys",
+				},
+				Attributes: map[string]*schema.Node{
 					"description": {
-						Type:        "string",
-						Required:    false,
-						Description: "Description of the SSH key",
+						Type:     "string",
+						Required: false,
+						Marinate: &schema.MarinateInfo{
+							Description: "Description of the SSH key",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 					"key": {
-						Type:        "string",
-						Required:    true,
-						Description: "The SSH key value",
+						Type:     "string",
+						Required: true,
+						Marinate: &schema.MarinateInfo{
+							Description: "The SSH key value",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 				},
 			},
@@ -132,22 +140,22 @@ func TestYAMLMarshalUnmarshal_FieldNamedDescription(t *testing.T) {
 		t.Fatal("expected 'ssh_key' node")
 	}
 
-	// Verify the "description" child exists and is correct
-	desc, ok := sshKey.Children["description"]
+	// Verify the "description" attribute exists and is correct
+	desc, ok := sshKey.Attributes["description"]
 	if !ok {
-		t.Fatal("expected 'description' child")
+		t.Fatal("expected 'description' attribute")
 	}
 	if desc.Type != "string" {
 		t.Errorf("expected type 'string', got %v", desc.Type)
 	}
-	if desc.Description != "Description of the SSH key" {
-		t.Errorf("expected description preserved, got %v", desc.Description)
+	if desc.Marinate.Description != "Description of the SSH key" {
+		t.Errorf("expected description preserved, got %v", desc.Marinate.Description)
 	}
 
-	// Verify the "key" child exists
-	key, ok := sshKey.Children["key"]
+	// Verify the "key" attribute exists
+	key, ok := sshKey.Attributes["key"]
 	if !ok {
-		t.Fatal("expected 'key' child")
+		t.Fatal("expected 'key' attribute")
 	}
 	if !key.Required {
 		t.Error("expected key to be required")
