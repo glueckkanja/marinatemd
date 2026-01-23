@@ -5,9 +5,11 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/c4a8-azure/marinatemd/internal/config"
 	"github.com/c4a8-azure/marinatemd/internal/hclparse"
 	"github.com/c4a8-azure/marinatemd/internal/logger"
 	"github.com/c4a8-azure/marinatemd/internal/markdown"
+	"github.com/c4a8-azure/marinatemd/internal/paths"
 	"github.com/c4a8-azure/marinatemd/internal/yamlio"
 	"github.com/spf13/cobra"
 )
@@ -31,9 +33,8 @@ var injectCmd = &cobra.Command{
 	Long: `Read YAML schema files and inject rendered markdown documentation into markdown and/or Terraform files.
 
 Arguments:
-  [schema-path]  Optional path to directory containing 'variables' subdirectory with YAML schemas.
-                 The tool expects schema files at <schema-path>/variables/*.yaml
-                 Defaults to <current-dir>/docs
+  [schema-path]  Optional path to directory containing YAML schema files (*.yaml).
+                 Defaults to <current-dir>/docs/variables
 
 Flags:
   --inject-type        Type of injection: "markdown" (default), "terraform", or "both".
@@ -59,8 +60,8 @@ Examples:
   marinatemd inject --inject-type both --terraform-module ./terraform --markdown-file README.md
 
   # 4. Custom schema path and custom markdown file
-  marinatemd inject /path/to/schemas --markdown-file docs/API.md
-  marinatemd inject ./docs --markdown-file /abs/path/to/doc.md`,
+  marinatemd inject /path/to/variables --markdown-file docs/API.md
+  marinatemd inject ./docs/variables --markdown-file /abs/path/to/doc.md`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runInject,
 }
@@ -91,9 +92,17 @@ func init() {
 }
 
 func runInject(_ *cobra.Command, args []string) error {
-	// Validate inject type
-	if err := validateInjectType(); err != nil {
+	// Load configuration (for template settings)
+	moduleRoot, cfg, err := paths.SetupEnvironment(args)
+	if err != nil {
 		return err
+	}
+
+	logger.Log.Debug("loaded configuration", "moduleRoot", moduleRoot)
+
+	// Validate inject type
+	if validateErr := validateInjectType(); validateErr != nil {
+		return validateErr
 	}
 
 	schemaBasePath, markdownPath, terraformPath, err := resolveInjectPaths(args)
@@ -109,14 +118,14 @@ func runInject(_ *cobra.Command, args []string) error {
 
 	// Handle markdown injection
 	if injectType == injectTypeMarkdown || injectType == injectTypeBoth {
-		if mdErr := injectMarkdown(schemaBasePath, markdownPath); mdErr != nil {
+		if mdErr := injectMarkdown(schemaBasePath, markdownPath, cfg); mdErr != nil {
 			return mdErr
 		}
 	}
 
 	// Handle Terraform injection
 	if injectType == injectTypeTerraform || injectType == injectTypeBoth {
-		if tfErr := injectTerraform(schemaBasePath, terraformPath); tfErr != nil {
+		if tfErr := injectTerraform(schemaBasePath, terraformPath, cfg); tfErr != nil {
 			return tfErr
 		}
 	}
@@ -152,7 +161,7 @@ func requiresTerraformModule() bool {
 }
 
 // injectMarkdown handles markdown injection logic.
-func injectMarkdown(schemaBasePath, markdownPath string) error {
+func injectMarkdown(schemaBasePath, markdownPath string, cfg *config.Config) error {
 	logger.Log.Info("injecting into markdown", "path", markdownPath)
 
 	// Verify markdown file exists
@@ -170,7 +179,8 @@ func injectMarkdown(schemaBasePath, markdownPath string) error {
 		return nil
 	}
 
-	renderer := markdown.NewRenderer()
+	// Create renderer with template config from configuration
+	renderer := markdown.NewRendererWithTemplate(cfg.MarkdownTemplate)
 	reader := yamlio.NewReader(schemaBasePath)
 	successCount := processInjectMarkers(markers, markdownPath, renderer, injector, reader)
 	printInjectSummary("markdown", successCount, len(markers))
@@ -178,7 +188,7 @@ func injectMarkdown(schemaBasePath, markdownPath string) error {
 }
 
 // injectTerraform handles Terraform injection logic.
-func injectTerraform(schemaBasePath, terraformPath string) error {
+func injectTerraform(schemaBasePath, terraformPath string, cfg *config.Config) error {
 	logger.Log.Info("injecting into Terraform", "path", terraformPath)
 
 	// Verify terraform module directory exists
@@ -202,7 +212,8 @@ func injectTerraform(schemaBasePath, terraformPath string) error {
 
 	logger.Log.Info("found markers in Terraform", "count", len(markers))
 
-	renderer := markdown.NewRenderer()
+	// Create renderer with template config from configuration
+	renderer := markdown.NewRendererWithTemplate(cfg.MarkdownTemplate)
 	reader := yamlio.NewReader(schemaBasePath)
 	successCount := processTerraformMarkers(markers, tfInjector, renderer, reader)
 	printInjectSummary("Terraform", successCount, len(markers))
@@ -269,9 +280,9 @@ func processTerraformMarker(
 	return true
 }
 
-// resolveInjectPaths determines the schema base path and markdown file path based on arguments and flags.
-// The schema base path is the parent directory of 'variables/', not the variables directory itself.
-// Returns: (schemaBasePath, markdownPath, terraformPath, error).
+// resolveInjectPaths determines the schema path and markdown file path based on arguments and flags.
+// The schema path points directly to the directory containing YAML schema files.
+// Returns: (schemaPath, markdownPath, terraformPath, error).
 func resolveInjectPaths(args []string) (string, string, string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -294,29 +305,47 @@ func resolveInjectPaths(args []string) (string, string, string, error) {
 }
 
 func resolveSchemaBasePath(cwd string, args []string) (string, error) {
-	var schemaBasePath string
+	var schemaPath string
 	if len(args) > 0 {
+		// User provided a path - use it as-is (expecting it to point to directory with YAML files)
 		if filepath.IsAbs(args[0]) {
-			schemaBasePath = args[0]
+			schemaPath = args[0]
 		} else {
-			schemaBasePath = filepath.Join(cwd, args[0])
+			schemaPath = filepath.Join(cwd, args[0])
 		}
-		logger.Log.Debug("using schema base path from argument", "input", args[0], "resolved", schemaBasePath)
+		logger.Log.Debug("using schema path from argument", "input", args[0], "resolved", schemaPath)
 	} else {
-		schemaBasePath = filepath.Join(cwd, "docs")
-		logger.Log.Debug("using default schema base path", "path", schemaBasePath)
+		// Default: use ./docs/variables
+		schemaPath = filepath.Join(cwd, "docs", "variables")
+		logger.Log.Debug("using default schema path", "path", schemaPath)
 	}
 
-	// Verify variables subdirectory exists
-	variablesPath := filepath.Join(schemaBasePath, "variables")
-	if _, statErr := os.Stat(variablesPath); statErr != nil {
+	// Verify schema directory exists
+	if _, statErr := os.Stat(schemaPath); statErr != nil {
 		return "", fmt.Errorf(
-			"schema directory not found: %s\n   Expected structure: <path>/variables/*.yaml\n   "+
+			"schema directory not found: %s\n   "+
 				"Ensure YAML schema files exist or run 'marinatemd export' first",
-			variablesPath)
+			schemaPath)
 	}
-	logger.Log.Debug("found variables directory", "path", variablesPath)
-	return schemaBasePath, nil
+	logger.Log.Debug("found schema directory", "path", schemaPath)
+
+	// Important: yamlio.Reader expects parent directory and appends "variables"
+	// If the path ends with "variables", use the parent directory
+	if filepath.Base(schemaPath) == "variables" {
+		parentPath := filepath.Dir(schemaPath)
+		logger.Log.Debug(
+			"schema path ends with 'variables', using parent directory",
+			"input",
+			schemaPath,
+			"parent",
+			parentPath,
+		)
+		return parentPath, nil
+	}
+
+	// Otherwise, assume the path is the parent directory containing a "variables" subdirectory
+	logger.Log.Debug("using path as parent directory (expects variables/ subdirectory)", "path", schemaPath)
+	return schemaPath, nil
 }
 
 func resolveMarkdownPath(cwd string) string {

@@ -1,0 +1,89 @@
+# MarinateMD Configuration
+#
+# This file configures how marinatemd processes your Terraform/OpenTofu module.
+# You can place this file in the following locations (in priority order):
+#   1. Root of module directory
+#   2. .config/ folder at root of module directory
+#   3. Current directory
+#   4. .config/ folder at current directory
+#   5. $HOME/.marinated.d/
+#
+# All settings can be overridden via CLI flags.
+
+# Path where YAML schemas and documentation are exported
+# All relative documentation paths are resolved relative to this directory
+# Default: docs
+export_path: docs
+
+# Main documentation file to inject markdown into
+# Relative to export_path (or absolute path)
+# This is also used as the default input for the split command
+# Default: README.md
+docs_file: README.md
+
+# Enable verbose logging
+# Default: false
+verbose: false
+
+# Markdown template configuration
+# Controls how variable documentation is rendered in markdown
+markdown_template:
+  # Template for rendering individual attributes
+  # Available placeholders:
+  #   {attribute}   - The attribute name
+  #   {required}    - Required/Optional text
+  #   {description} - The attribute description
+  #   {type}        - The attribute type
+  #   {default}     - Default value (if any)
+  #   {example}     - Example value (if any)
+  # Default: "{attribute} - ({required}) {description}"
+  attribute_template: "{attribute} - ({required}) {description}"
+
+  # Text to display for required attributes
+  # Default: "Required"
+  required_text: "Required"
+
+  # Text to display for optional attributes
+  # Default: "Optional"
+  optional_text: "Optional"
+
+  # How to format attribute names in markdown
+  # Options: "inline_code" (backticks), "bold" (**), "italic" (*), "none"
+  # Default: "inline_code"
+  escape_mode: "bold"
+
+  # How to indent nested attributes
+  # Options: "bullets" (use markdown list bullets), "spaces" (use space indentation)
+  # Default: "bullets"
+  indent_style: "bullets"
+
+  # Number of spaces per indent level (only used when indent_style is "spaces")
+  # Default: 2
+  indent_size: 2
+
+# Split command configuration
+# Controls how the split command extracts MARINATED variables into separate files
+split:
+  # Path to the input markdown file to split
+  # If not specified, defaults to docs_file (relative to export_path)
+  # Can be relative to export_path or an absolute path
+  # Default: uses docs_file setting
+  # input_path: README.md
+
+  # Directory where split markdown files will be written
+  # Each MARINATED variable will create a separate file: <variable_name>.md
+  # Relative to export_path (or absolute path)
+  # Default: variables
+  output_dir: variables
+
+  # Path to a header markdown file to prepend to each split file
+  # Useful for adding common frontmatter, navigation, or introductory text
+  # Can be relative to module root or an absolute path
+  # Default: "" (no header)
+  header_file: examples/_header.md
+
+  # Path to a footer markdown file to append to each split file
+  # Useful for adding common links, copyright notices, or related documentation
+  # Can be relative to module root or an absolute path
+  # Default: "" (no footer)
+  footer_file: examples/_footer.md

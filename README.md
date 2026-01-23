@@ -146,11 +146,56 @@ marinatemd export .
 
 ### `inject` - Update Documentation
 
-Reads YAML schemas and injects rendered markdown into your README.md at MARINATED markers.
+Reads YAML schemas and injects rendered markdown into your README.md or Terraform variable files at MARINATED markers.
+
+**Usage:**
 
 ```bash
-marinatemd inject .
-marinatemd inject --docs-file docs/VARIABLES.md .
+# Inject into markdown (default) using default paths
+marinatemd inject
+
+# Inject using custom schema directory
+marinatemd inject ./docs/variables
+
+# Inject into Terraform files
+marinatemd inject --inject-type terraform --terraform-module ./terraform
+
+# Inject into both markdown and Terraform
+marinatemd inject --inject-type both --markdown-file README.md --terraform-module ./terraform
+```
+
+**Arguments:**
+
+- `[schema-path]` - Optional path to directory containing YAML schema files (`*.yaml`). 
+  - If the path ends with `variables`, the parent directory is used
+  - Defaults to `./docs/variables`
+
+**Flags:**
+
+- `--inject-type` - Type of injection: `markdown` (default), `terraform`, or `both`
+- `--markdown-file` - Path to markdown file to inject into (defaults to `./README.md`)
+- `--terraform-module` - Path to Terraform module directory (required when inject-type is `terraform` or `both`)
+
+**Examples:**
+
+```bash
+# Use default: inject from ./docs/variables/*.yaml into ./README.md
+marinatemd inject
+
+# Custom schema path (path with YAML files directly)
+marinatemd inject ./custom/path
+
+# Custom schema path (parent of 'variables' directory)
+marinatemd inject ./docs
+
+# Inject into custom markdown file
+marinatemd inject --markdown-file docs/VARIABLES.md
+
+# Inject into Terraform files only
+marinatemd inject --inject-type terraform --terraform-module ./terraform
+
+# Inject into both markdown and Terraform
+marinatemd inject --inject-type both --terraform-module ./terraform
 ```
 
 ### `split` - Post-Process Documentation
@@ -216,12 +261,12 @@ markdown_template:
 
 The `split` section configures default behavior for the `marinatemd split` command:
 
-| Setting       | Description                                                 | Default     |
-| ------------- | ----------------------------------------------------------- | ----------- |
-| `input_path`  | Input markdown file (relative to `export_path`)             | `README.md` |
-| `output_dir`  | Output directory for split files (relative to `export_path`)| `variables` |
-| `header_file` | Path to header template file to prepend to each split file  | _(empty)_   |
-| `footer_file` | Path to footer template file to append to each split file   | _(empty)_   |
+| Setting       | Description                                                  | Default     |
+| ------------- | ------------------------------------------------------------ | ----------- |
+| `input_path`  | Input markdown file (relative to `export_path`)              | `README.md` |
+| `output_dir`  | Output directory for split files (relative to `export_path`) | `variables` |
+| `header_file` | Path to header template file to prepend to each split file   | _(empty)_   |
+| `footer_file` | Path to footer template file to append to each split file    | _(empty)_   |
 
 **Priority Order:** CLI flags override config file settings, which override built-in defaults.
 
