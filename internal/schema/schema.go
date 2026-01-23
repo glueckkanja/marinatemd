@@ -47,7 +47,7 @@ type MarinateInfo struct {
 // UnmarshalYAML implements custom YAML unmarshaling for Node.
 // This separates _marinate metadata from child attributes and direct fields.
 //
-//nolint:gocognit // Complex unmarshaling logic is necessary for the inline YAML structure
+//nolint:gocognit // Multiple field iterations and branching cases are required to split _marinate metadata from inline child attributes while preserving the YAML structure
 func (n *Node) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind != yaml.MappingNode {
 		return fmt.Errorf("expected mapping node, got %v", value.Kind)
