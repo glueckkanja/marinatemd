@@ -199,7 +199,7 @@ func (tc *TemplateConfig) Validate() error {
 }
 
 // validateSeparator checks if an ObjectSeparator configuration is valid.
-func validateSeparator(sep *ObjectSeparator, idx int) error {
+func validateSeparator(sep *ObjectSeparator, _ int) error {
 	// Validate level (must be >= -1)
 	if sep.Level < -1 {
 		return fmt.Errorf("level must be >= -1 (got %d)", sep.Level)
@@ -207,10 +207,10 @@ func validateSeparator(sep *ObjectSeparator, idx int) error {
 
 	// Validate style
 	validStyles := map[string]bool{
-		SeparatorStyleNone:   true,
-		SeparatorStyleBlank:  true,
-		SeparatorStyleLine:   true,
-		SeparatorStyleFence:  true,
+		SeparatorStyleNone:  true,
+		SeparatorStyleBlank: true,
+		SeparatorStyleLine:  true,
+		SeparatorStyleFence: true,
 	}
 	if sep.Style == "" {
 		sep.Style = SeparatorStyleNone // Default

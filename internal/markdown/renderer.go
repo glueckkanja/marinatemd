@@ -68,55 +68,86 @@ func (r *Renderer) renderNode(name string, node *schema.Node, depth int, builder
 		return nil
 	}
 
-	// Render this node if it has documentation in Marinate
-	if node.Marinate != nil && node.Marinate.Description != "" {
-		ctx := TemplateContext{
-			Attribute:   name,
-			Required:    node.Required,
-			Description: node.Marinate.Description,
-			Type:        node.Type,
-		}
+	r.renderNodeContent(name, node, depth, builder)
 
-		indent := r.templateCfg.FormatIndent(depth)
-		rendered := r.templateCfg.RenderAttribute(ctx)
-		builder.WriteString(indent)
-		builder.WriteString(rendered)
-		builder.WriteString("\n")
+	if len(node.Attributes) > 0 {
+		return r.renderNodeChildren(node, depth, builder)
 	}
 
-	// Render child attributes recursively
-	if len(node.Attributes) > 0 {
-		attrNames := make([]string, 0, len(node.Attributes))
-		for attrName := range node.Attributes {
-			attrNames = append(attrNames, attrName)
-		}
-		sort.Strings(attrNames)
+	return nil
+}
 
-		// Track if we need separators for this level
-		isObjectType := node.Type == "object"
-		var separator *ObjectSeparator
-		if isObjectType {
-			separator = r.templateCfg.GetSeparatorForLevel(depth)
-		}
+// renderNodeContent renders the current node's content if it has documentation.
+func (r *Renderer) renderNodeContent(name string, node *schema.Node, depth int, builder *strings.Builder) {
+	if node.Marinate == nil || node.Marinate.Description == "" {
+		return
+	}
 
-		for i, attrName := range attrNames {
-			attr := node.Attributes[attrName]
+	ctx := TemplateContext{
+		Attribute:   name,
+		Required:    node.Required,
+		Description: node.Marinate.Description,
+		Type:        node.Type,
+	}
 
-			// Insert separator before child object nodes (but not before the first one)
-			if separator != nil && i > 0 && attr.Type == "object" {
-				separatorText := r.templateCfg.RenderSeparator(separator)
-				if separatorText != "" {
-					builder.WriteString(separatorText)
-				}
-			}
+	indent := r.templateCfg.FormatIndent(depth)
+	rendered := r.templateCfg.RenderAttribute(ctx)
+	builder.WriteString(indent)
+	builder.WriteString(rendered)
+	builder.WriteString("\n")
+}
 
-			if err := r.renderNode(attrName, attr, depth+1, builder); err != nil {
-				return err
-			}
+// renderNodeChildren renders all child attributes of a node.
+func (r *Renderer) renderNodeChildren(node *schema.Node, depth int, builder *strings.Builder) error {
+	attrNames := r.getSortedAttributeNames(node)
+	separator := r.getSeparatorForNode(node, depth)
+
+	for i, attrName := range attrNames {
+		attr := node.Attributes[attrName]
+
+		r.insertSeparatorIfNeeded(separator, i, attr, builder)
+
+		if err := r.renderNode(attrName, attr, depth+1, builder); err != nil {
+			return err
 		}
 	}
 
 	return nil
+}
+
+// getSortedAttributeNames returns a sorted list of attribute names for deterministic output.
+func (r *Renderer) getSortedAttributeNames(node *schema.Node) []string {
+	attrNames := make([]string, 0, len(node.Attributes))
+	for attrName := range node.Attributes {
+		attrNames = append(attrNames, attrName)
+	}
+	sort.Strings(attrNames)
+	return attrNames
+}
+
+// getSeparatorForNode determines if separators should be used for this node's children.
+func (r *Renderer) getSeparatorForNode(node *schema.Node, depth int) *ObjectSeparator {
+	if node.Type == "object" {
+		return r.templateCfg.GetSeparatorForLevel(depth)
+	}
+	return nil
+}
+
+// insertSeparatorIfNeeded inserts a separator before child object nodes if configured.
+func (r *Renderer) insertSeparatorIfNeeded(
+	separator *ObjectSeparator,
+	index int,
+	attr *schema.Node,
+	builder *strings.Builder,
+) {
+	if separator == nil || index == 0 || attr.Type != "object" {
+		return
+	}
+
+	separatorText := r.templateCfg.RenderSeparator(separator)
+	if separatorText != "" {
+		builder.WriteString(separatorText)
+	}
 }
 
 // Injector handles injecting generated markdown into documentation files.

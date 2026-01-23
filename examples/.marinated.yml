@@ -1,30 +1,20 @@
-# MarinateMD Configuration Example
-# This file configures default behavior for marinatemd commands
+export_path: "docs"
+docs_file: "README.md"
 
-# Path to export directory
-export_path: docs
+markdown_template:
+  attribute_template: "{attribute} - ({required}) {description}"
+  required_text: "Required"
+  optional_text: "Optional"
+  escape_mode: "inline_code"
+  indent_style: "bullets"
+  indent_size: 2
+  object_separators:
+    - level: 1
+      style: "line"
+    - level: 2
+      style: "line"
 
-# Default documentation file to inject into
-docs_file: README.md
-
-# Split command configuration
 split:
-  # Input markdown file to split (relative to export_path)
-  input_path: README.md
-
-  # Output directory for split files (relative to export_path)
-  output_dir: split_output
-
-  # Header template file to prepend to each split file
-  header_file: _header.md
-
-  # Footer template file to append to each split file
-  footer_file: _footer.md
-# Markdown template configuration (optional)
-# markdown_template:
-#   attribute_template: "{attribute} - ({required}) {description}"
-#   required_text: "Required"
-#   optional_text: "Optional"
-#   escape_mode: inline_code
-#   indent_style: bullets
-#   indent_size: 2
+  output_dir: "split_simple"
+  header_file: "_header.md"
+  footer_file: "_footer.md"
