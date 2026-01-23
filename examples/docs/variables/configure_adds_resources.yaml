@@ -2,212 +2,275 @@ variable: configure_adds_resources
 version: "1"
 schema:
     advanced:
-        _meta:
+        _marinate:
             description: '# TODO: Add description for advanced'
         type: any
     location:
-        _meta:
+        _marinate:
             description: '# TODO: Add description for location'
         type: string
     settings:
-        _meta:
+        _marinate:
             description: '# TODO: Add description for settings'
         type: object
         forests:
+            _marinate:
+                description: '# TODO: Add description for forests'
             type: list
-            description: '# TODO: Add description for forests'
             element_type: object
             config:
+                _marinate:
+                    description: '# TODO: Add description for config'
                 type: object
-                description: '# TODO: Add description for config'
                 backup_policy:
+                    _marinate:
+                        description: '# TODO: Add description for backup_policy'
                     type: object
-                    description: '# TODO: Add description for backup_policy'
                     enhanced:
+                        _marinate:
+                            description: '# TODO: Add description for enhanced'
                         type: bool
-                        description: '# TODO: Add description for enhanced'
                 network:
+                    _marinate:
+                        description: '# TODO: Add description for network'
                     type: object
-                    description: '# TODO: Add description for network'
                 network_security_rules:
+                    _marinate:
+                        description: '# TODO: Add description for network_security_rules'
                     type: object
-                    description: '# TODO: Add description for network_security_rules'
                     custom_prefixes:
+                        _marinate:
+                            description: '# TODO: Add description for custom_prefixes'
                         type: any
-                        description: '# TODO: Add description for custom_prefixes'
                     remote_address_prefixes:
+                        _marinate:
+                            description: '# TODO: Add description for remote_address_prefixes'
                         type: list
-                        description: '# TODO: Add description for remote_address_prefixes'
                         element_type: string
                 recovery_service:
+                    _marinate:
+                        description: '# TODO: Add description for recovery_service'
                     type: object
-                    description: '# TODO: Add description for recovery_service'
                     immutability:
+                        _marinate:
+                            description: '# TODO: Add description for immutability'
                         type: string
-                        description: '# TODO: Add description for immutability'
             domains:
+                _marinate:
+                    description: '# TODO: Add description for domains'
                 type: list
-                description: '# TODO: Add description for domains'
                 element_type: object
                 config:
+                    _marinate:
+                        description: '# TODO: Add description for config'
                     type: object
-                    description: '# TODO: Add description for config'
                     domain_controllers:
+                        _marinate:
+                            description: '# TODO: Add description for domain_controllers'
                         type: list
-                        description: '# TODO: Add description for domain_controllers'
                         element_type: object
                         azure_update:
+                            _marinate:
+                                description: '# TODO: Add description for azure_update'
                             type: object
-                            description: '# TODO: Add description for azure_update'
                             enabled:
+                                _marinate:
+                                    description: '# TODO: Add description for enabled'
                                 type: bool
-                                description: '# TODO: Add description for enabled'
                             template:
+                                _marinate:
+                                    description: '# TODO: Add description for template'
                                 type: string
-                                description: '# TODO: Add description for template'
                         computer_name:
+                            _marinate:
+                                description: '# TODO: Add description for computer_name'
                             type: string
-                            description: '# TODO: Add description for computer_name'
+                        data_disk_size:
+                            _marinate:
+                                description: '# TODO: Add description for data_disk_size'
+                            type: number
                         dns_servers:
+                            _marinate:
+                                description: '# TODO: Add description for dns_servers'
                             type: list
-                            description: '# TODO: Add description for dns_servers'
                             element_type: string
                         enable_boot_diagnostics:
+                            _marinate:
+                                description: '# TODO: Add description for enable_boot_diagnostics'
                             type: bool
-                            description: '# TODO: Add description for enable_boot_diagnostics'
                         enabled:
+                            _marinate:
+                                description: '# TODO: Add description for enabled'
                             type: bool
-                            description: '# TODO: Add description for enabled'
                         image_sku:
+                            _marinate:
+                                description: '# TODO: Add description for image_sku'
                             type: string
-                            description: '# TODO: Add description for image_sku'
                         meta_data:
+                            _marinate:
+                                description: '# TODO: Add description for meta_data'
                             type: object
-                            description: '# TODO: Add description for meta_data'
                             tags:
+                                _marinate:
+                                    description: '# TODO: Add description for tags'
                                 type: map
-                                description: '# TODO: Add description for tags'
                                 value_type: string
                         name:
+                            _marinate:
+                                description: '# TODO: Add description for name'
                             type: string
-                            description: '# TODO: Add description for name'
                         role_assignments:
+                            _marinate:
+                                description: '# TODO: Add description for role_assignments'
                             type: list
-                            description: '# TODO: Add description for role_assignments'
                             element_type: object
                             principal_id:
+                                _marinate:
+                                    description: '# TODO: Add description for principal_id'
                                 type: string
                                 required: true
-                                description: '# TODO: Add description for principal_id'
                             role_definition_name:
+                                _marinate:
+                                    description: '# TODO: Add description for role_definition_name'
                                 type: string
                                 required: true
-                                description: '# TODO: Add description for role_definition_name'
                         size:
+                            _marinate:
+                                description: '# TODO: Add description for size'
                             type: string
-                            description: '# TODO: Add description for size'
                         use_enhanced_backup:
+                            _marinate:
+                                description: '# TODO: Add description for use_enhanced_backup'
                             type: bool
-                            description: '# TODO: Add description for use_enhanced_backup'
                         use_trusted_launch:
+                            _marinate:
+                                description: '# TODO: Add description for use_trusted_launch'
                             type: bool
-                            description: '# TODO: Add description for use_trusted_launch'
                     domain_type:
+                        _marinate:
+                            description: '# TODO: Add description for domain_type'
                         type: string
-                        description: '# TODO: Add description for domain_type'
                     network:
+                        _marinate:
+                            description: '# TODO: Add description for network'
                         type: object
-                        description: '# TODO: Add description for network'
                     network_security_rules:
+                        _marinate:
+                            description: '# TODO: Add description for network_security_rules'
                         type: object
-                        description: '# TODO: Add description for network_security_rules'
                         custom_prefixes:
+                            _marinate:
+                                description: '# TODO: Add description for custom_prefixes'
                             type: any
-                            description: '# TODO: Add description for custom_prefixes'
                         remote_address_prefixes:
+                            _marinate:
+                                description: '# TODO: Add description for remote_address_prefixes'
                             type: list
-                            description: '# TODO: Add description for remote_address_prefixes'
                             element_type: string
                     optional_routes:
+                        _marinate:
+                            description: '# TODO: Add description for optional_routes'
                         type: list
-                        description: '# TODO: Add description for optional_routes'
                         element_type: string
                     parent_domain_name:
+                        _marinate:
+                            description: '# TODO: Add description for parent_domain_name'
                         type: string
-                        description: '# TODO: Add description for parent_domain_name'
                     users:
+                        _marinate:
+                            description: '# TODO: Add description for users'
                         type: object
-                        description: '# TODO: Add description for users'
                         customer_role_assignment:
+                            _marinate:
+                                description: '# TODO: Add description for customer_role_assignment'
                             type: list
-                            description: '# TODO: Add description for customer_role_assignment'
                             element_type: string
                 fqdn:
+                    _marinate:
+                        description: '# TODO: Add description for fqdn'
                     type: string
-                    description: '# TODO: Add description for fqdn'
                 index:
+                    _marinate:
+                        description: '# TODO: Add description for index'
                     type: number
-                    description: '# TODO: Add description for index'
                 netbios_name:
+                    _marinate:
+                        description: '# TODO: Add description for netbios_name'
                     type: string
-                    description: '# TODO: Add description for netbios_name'
             enabled:
+                _marinate:
+                    description: '# TODO: Add description for enabled'
                 type: bool
-                description: '# TODO: Add description for enabled'
             fqdn:
+                _marinate:
+                    description: '# TODO: Add description for fqdn'
                 type: string
-                description: '# TODO: Add description for fqdn'
             index:
+                _marinate:
+                    description: '# TODO: Add description for index'
                 type: number
-                description: '# TODO: Add description for index'
             netbios_name:
+                _marinate:
+                    description: '# TODO: Add description for netbios_name'
                 type: string
-                description: '# TODO: Add description for netbios_name'
             test:
+                _marinate:
+                    description: '# TODO: Add description for test'
                 type: string
-                description: '# TODO: Add description for test'
         maintenance_templates:
+            _marinate:
+                description: '# TODO: Add description for maintenance_templates'
             type: list
-            description: '# TODO: Add description for maintenance_templates'
             element_type: object
             classifications_to_include:
+                _marinate:
+                    description: '# TODO: Add description for classifications_to_include'
                 type: list
-                description: '# TODO: Add description for classifications_to_include'
                 element_type: string
             duration:
+                _marinate:
+                    description: '# TODO: Add description for duration'
                 type: string
-                description: '# TODO: Add description for duration'
             expiration_date_time:
+                _marinate:
+                    description: '# TODO: Add description for expiration_date_time'
                 type: string
-                description: '# TODO: Add description for expiration_date_time'
             in_guest_user_patch_mode:
+                _marinate:
+                    description: '# TODO: Add description for in_guest_user_patch_mode'
                 type: string
-                description: '# TODO: Add description for in_guest_user_patch_mode'
             name:
+                _marinate:
+                    description: '# TODO: Add description for name'
                 type: string
                 required: true
-                description: '# TODO: Add description for name'
             reboot:
+                _marinate:
+                    description: '# TODO: Add description for reboot'
                 type: string
-                description: '# TODO: Add description for reboot'
             recur_every:
+                _marinate:
+                    description: '# TODO: Add description for recur_every'
                 type: string
                 required: true
-                description: '# TODO: Add description for recur_every'
             scope:
+                _marinate:
+                    description: '# TODO: Add description for scope'
                 type: string
-                description: '# TODO: Add description for scope'
             start_date_time:
+                _marinate:
+                    description: '# TODO: Add description for start_date_time'
                 type: string
                 required: true
-                description: '# TODO: Add description for start_date_time'
             time_zone:
+                _marinate:
+                    description: '# TODO: Add description for time_zone'
                 type: string
-                description: '# TODO: Add description for time_zone'
             visibility:
+                _marinate:
+                    description: '# TODO: Add description for visibility'
                 type: string
-                description: '# TODO: Add description for visibility'
     tags:
-        _meta:
+        _marinate:
             description: '# TODO: Add description for tags'
         type: any

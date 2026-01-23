@@ -4,10 +4,10 @@ Configures the adds resources for the AzERE deployment.
 
 ### Attributes
 
-<!-- MARINATED: configure\_adds\_resources -->
+<!-- MARINATED: configure_adds_resources -->
 
-- `advanced` - (Optional) 
-- `location` - (Optional) 
+- `advanced` - (Optional) # TODO: Add description for advanced
+- `location` - (Optional) # TODO: Add description for location
 - `settings` - (Optional) # TODO: Add description for settings
   - `forests` - (Optional) # TODO: Add description for forests
     - `config` - (Optional) # TODO: Add description for config
@@ -26,6 +26,7 @@ Configures the adds resources for the AzERE deployment.
             - `enabled` - (Optional) # TODO: Add description for enabled
             - `template` - (Optional) # TODO: Add description for template
           - `computer_name` - (Optional) # TODO: Add description for computer_name
+          - `data_disk_size` - (Optional) # TODO: Add description for data_disk_size
           - `dns_servers` - (Optional) # TODO: Add description for dns_servers
           - `enable_boot_diagnostics` - (Optional) # TODO: Add description for enable_boot_diagnostics
           - `enabled` - (Optional) # TODO: Add description for enabled
@@ -68,10 +69,10 @@ Configures the adds resources for the AzERE deployment.
     - `start_date_time` - (Required) # TODO: Add description for start_date_time
     - `time_zone` - (Optional) # TODO: Add description for time_zone
     - `visibility` - (Optional) # TODO: Add description for visibility
-- `tags` - (Optional) 
+- `tags` - (Optional) # TODO: Add description for tags
 
 
-<!-- /MARINATED: configure\_adds\_resources -->
+<!-- /MARINATED: configure_adds_resources -->
 DESCRIPTION
   type = object({
     settings = optional(object({
@@ -126,13 +127,13 @@ DESCRIPTION
             }), {})
             optional_routes = optional(list(string), [])
             domain_controllers = optional(list(object({
-              enabled       = optional(bool, true)
-              name          = optional(string, "")
-              computer_name = optional(string, "")
-              size          = optional(string, "")
-              image_sku     = optional(string, "")
+              enabled        = optional(bool, true)
+              name           = optional(string, "")
+              computer_name  = optional(string, "")
+              size           = optional(string, "")
+              image_sku      = optional(string, "")
               data_disk_size = optional(number, 20)
-              dns_servers = optional(list(string), [])
+              dns_servers    = optional(list(string), [])
               meta_data = optional(object({
                 tags = optional(map(string))
               }), {})

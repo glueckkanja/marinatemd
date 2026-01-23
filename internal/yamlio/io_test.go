@@ -19,19 +19,25 @@ func TestWriter_WriteSchema(t *testing.T) {
 			"database": {
 				Type:     "object",
 				Required: false,
-				Meta: &schema.MetaInfo{
+				Marinate: &schema.MarinateInfo{
 					Description: "Database configuration",
 				},
-				Children: map[string]*schema.Node{
+				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:        "string",
-						Required:    true,
-						Description: "Database host",
+						Type:     "string",
+						Required: true,
+						Marinate: &schema.MarinateInfo{
+							Description: "Database host",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 					"port": {
-						Type:        "number",
-						Required:    false,
-						Description: "Database port",
+						Type:     "number",
+						Required: false,
+						Marinate: &schema.MarinateInfo{
+							Description: "Database port",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 				},
 			},
@@ -88,16 +94,18 @@ schema:
   database:
     type: object
     required: false
-    _meta:
+    _marinate:
       description: "Database configuration"
     host:
       type: string
       required: true
-      description: "Database host"
+      _marinate:
+        description: "Database host"
     port:
       type: number
       required: false
-      description: "Database port"
+      _marinate:
+        description: "Database port"
 `
 
 	// Create directory
@@ -153,19 +161,25 @@ func TestWriter_WriteSchema_ComplexNested(t *testing.T) {
 				Type:        "list",
 				Required:    false,
 				ElementType: "object",
-				Meta: &schema.MetaInfo{
+				Marinate: &schema.MarinateInfo{
 					Description: "Private link access rules",
 				},
-				Children: map[string]*schema.Node{
+				Attributes: map[string]*schema.Node{
 					"endpoint_resource_id": {
-						Type:        "string",
-						Required:    true,
-						Description: "Resource ID",
+						Type:     "string",
+						Required: true,
+						Marinate: &schema.MarinateInfo{
+							Description: "Resource ID",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 					"endpoint_tenant_id": {
-						Type:        "string",
-						Required:    false,
-						Description: "Tenant ID",
+						Type:     "string",
+						Required: false,
+						Marinate: &schema.MarinateInfo{
+							Description: "Tenant ID",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 				},
 			},
@@ -193,10 +207,10 @@ func TestWriter_WriteSchema_ComplexNested(t *testing.T) {
 		t.Errorf("element_type = %v, want object", pla.ElementType)
 	}
 
-	// Check children
-	eri, ok := pla.Children["endpoint_resource_id"]
+	// Check attributes
+	eri, ok := pla.Attributes["endpoint_resource_id"]
 	if !ok {
-		t.Fatal("expected endpoint_resource_id child")
+		t.Fatal("expected endpoint_resource_id attribute")
 	}
 	if !eri.Required {
 		t.Error("expected endpoint_resource_id to be required")
@@ -250,14 +264,17 @@ func TestWriter_PreserveExistingDescriptions(t *testing.T) {
 			"database": {
 				Type:     "object",
 				Required: false,
-				Meta: &schema.MetaInfo{
+				Marinate: &schema.MarinateInfo{
 					Description: "User-written database description",
 				},
-				Children: map[string]*schema.Node{
+				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:        "string",
-						Required:    true,
-						Description: "User-written host description",
+						Type:     "string",
+						Required: true,
+						Marinate: &schema.MarinateInfo{
+							Description: "User-written host description",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 				},
 			},
@@ -278,12 +295,100 @@ func TestWriter_PreserveExistingDescriptions(t *testing.T) {
 
 	// Verify descriptions were preserved
 	db := readBack.SchemaNodes["database"]
-	if db.Meta.Description != "User-written database description" {
-		t.Errorf("expected description to be preserved, got %v", db.Meta.Description)
+	if db.Marinate == nil || db.Marinate.Description != "User-written database description" {
+		t.Errorf("expected description to be preserved, got %v", db.Marinate)
 	}
 
-	host := db.Children["host"]
-	if host.Description != "User-written host description" {
-		t.Errorf("expected host description to be preserved, got %v", host.Description)
+	host := db.Attributes["host"]
+	if host.Marinate == nil || host.Marinate.Description != "User-written host description" {
+		t.Errorf("expected host description to be preserved, got %v", host.Marinate)
+	}
+}
+
+// TestWriter_FieldNamedDescription tests that we can write and read
+// a schema with a field named "description" without conflicts.
+func TestWriter_FieldNamedDescription(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a schema with a node that has an attribute named "description"
+	originalSchema := &schema.Schema{
+		Variable: "ssh_config",
+		Version:  "1",
+		SchemaNodes: map[string]*schema.Node{
+			"ssh_authorized_key": {
+				Type:        "list",
+				ElementType: "object",
+				Required:    false,
+				Marinate: &schema.MarinateInfo{
+					Description: "SSH authorized keys configuration",
+				},
+				Attributes: map[string]*schema.Node{
+					"description": {
+						Type:     "string",
+						Required: false,
+						Marinate: &schema.MarinateInfo{
+							Description: "Description of the SSH key",
+						},
+						Attributes: map[string]*schema.Node{},
+					},
+					"key": {
+						Type:     "string",
+						Required: true,
+						Marinate: &schema.MarinateInfo{
+							Description: "The SSH public key",
+						},
+						Attributes: map[string]*schema.Node{},
+					},
+				},
+			},
+		},
+	}
+
+	// Write the schema
+	writer := yamlio.NewWriter(tmpDir)
+	if err := writer.WriteSchema(originalSchema); err != nil {
+		t.Fatalf("WriteSchema() error = %v", err)
+	}
+
+	// Read the YAML file content for inspection
+	yamlPath := filepath.Join(tmpDir, "variables", "ssh_config.yaml")
+	content, err := os.ReadFile(yamlPath)
+	if err != nil {
+		t.Fatalf("failed to read YAML file: %v", err)
+	}
+	t.Logf("Generated YAML:\n%s", string(content))
+
+	// Read it back
+	reader := yamlio.NewReader(tmpDir)
+	readSchema, err := reader.ReadSchema("ssh_config")
+	if err != nil {
+		t.Fatalf("ReadSchema() error = %v", err)
+	}
+
+	// Verify the schema structure
+	sshKey := readSchema.SchemaNodes["ssh_authorized_key"]
+	if sshKey == nil {
+		t.Fatal("expected ssh_authorized_key node")
+	}
+
+	// Verify the "description" attribute exists
+	desc, ok := sshKey.Attributes["description"]
+	if !ok {
+		t.Fatal("expected 'description' attribute")
+	}
+	if desc.Type != "string" {
+		t.Errorf("expected type 'string', got %v", desc.Type)
+	}
+	if desc.Marinate == nil || desc.Marinate.Description != "Description of the SSH key" {
+		t.Errorf("expected description preserved, got %v", desc.Marinate)
+	}
+
+	// Verify the "key" attribute exists
+	key, ok := sshKey.Attributes["key"]
+	if !ok {
+		t.Fatal("expected 'key' attribute")
+	}
+	if !key.Required {
+		t.Error("expected key to be required")
 	}
 }

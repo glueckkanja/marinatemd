@@ -48,14 +48,20 @@ func TestRenderSchema_SimpleAttributes(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"bypass": {
-				Type:        "string",
-				Required:    false,
-				Description: "Specifies whether traffic is bypassed for Logging/Metrics/AzureServices. Valid options are any combination of `Logging`, `Metrics`, `AzureServices`, or `None`.",
+				Type:     "string",
+				Required: false,
+				Marinate: &schema.MarinateInfo{
+					Description: "Specifies whether traffic is bypassed for Logging/Metrics/AzureServices. Valid options are any combination of `Logging`, `Metrics`, `AzureServices`, or `None`.",
+				},
+				Attributes: map[string]*schema.Node{},
 			},
 			"default_action": {
-				Type:        "string",
-				Required:    true,
-				Description: "Specifies the default action of allow or deny when no other rules match.",
+				Type:     "string",
+				Required: true,
+				Marinate: &schema.MarinateInfo{
+					Description: "Specifies the default action of allow or deny when no other rules match.",
+				},
+				Attributes: map[string]*schema.Node{},
 			},
 		},
 	}
@@ -89,19 +95,25 @@ func TestRenderSchema_NestedObjects(t *testing.T) {
 			"database": {
 				Type:     "object",
 				Required: false,
-				Meta: &schema.MetaInfo{
+				Marinate: &schema.MarinateInfo{
 					Description: "Database configuration settings",
 				},
-				Children: map[string]*schema.Node{
+				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:        "string",
-						Required:    true,
-						Description: "The database host address",
+						Type:     "string",
+						Required: true,
+						Marinate: &schema.MarinateInfo{
+							Description: "The database host address",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 					"port": {
-						Type:        "number",
-						Required:    false,
-						Description: "The database port number",
+						Type:     "number",
+						Required: false,
+						Marinate: &schema.MarinateInfo{
+							Description: "The database port number",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 				},
 			},
@@ -143,9 +155,12 @@ func TestRenderSchema_CustomTemplate(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"field1": {
-				Type:        "string",
-				Required:    true,
-				Description: "A test field",
+				Type:     "string",
+				Required: true,
+				Marinate: &schema.MarinateInfo{
+					Description: "A test field",
+				},
+				Attributes: map[string]*schema.Node{},
 			},
 		},
 	}
@@ -205,19 +220,28 @@ func TestRenderSchema_DeterministicOrder(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"zebra": {
-				Type:        "string",
-				Required:    false,
-				Description: "Last alphabetically",
+				Type:     "string",
+				Required: false,
+				Marinate: &schema.MarinateInfo{
+					Description: "Last alphabetically",
+				},
+				Attributes: map[string]*schema.Node{},
 			},
 			"alpha": {
-				Type:        "string",
-				Required:    false,
-				Description: "First alphabetically",
+				Type:     "string",
+				Required: false,
+				Marinate: &schema.MarinateInfo{
+					Description: "First alphabetically",
+				},
+				Attributes: map[string]*schema.Node{},
 			},
 			"middle": {
-				Type:        "string",
-				Required:    false,
-				Description: "Middle alphabetically",
+				Type:     "string",
+				Required: false,
+				Marinate: &schema.MarinateInfo{
+					Description: "Middle alphabetically",
+				},
+				Attributes: map[string]*schema.Node{},
 			},
 		},
 	}
