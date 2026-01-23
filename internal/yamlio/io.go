@@ -15,6 +15,14 @@ type Reader struct {
 }
 
 // NewReader creates a new YAML reader.
+//
+// The exportPath should be the parent directory that contains the "variables" folder.
+// For example, if your YAML files are in "/path/to/project/docs/variables/", you should
+// pass "/path/to/project/docs" as the exportPath. The Reader will automatically append
+// "variables" to construct the full path to the YAML files.
+//
+// This design allows the Reader to work with the standard directory structure where
+// all schema YAML files are stored in a "variables" subdirectory.
 func NewReader(exportPath string) *Reader {
 	return &Reader{
 		exportPath: exportPath,

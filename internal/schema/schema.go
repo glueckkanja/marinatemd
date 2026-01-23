@@ -160,13 +160,7 @@ func (n *Node) MarshalYAML() (any, error) {
 
 	// Add attributes in sorted order for deterministic output
 	if len(n.Attributes) > 0 {
-		attrNames := make([]string, 0, len(n.Attributes))
-		for name := range n.Attributes {
-			attrNames = append(attrNames, name)
-		}
-		sort.Strings(attrNames)
-
-		for _, name := range attrNames {
+		for _, name := range sortedKeys(n.Attributes) {
 			attr := n.Attributes[name]
 
 			keyNode := &yaml.Node{
@@ -184,6 +178,17 @@ func (n *Node) MarshalYAML() (any, error) {
 	}
 
 	return node, nil
+}
+
+// sortedKeys returns a sorted slice of keys from the Attributes map.
+// This ensures deterministic YAML output.
+func sortedKeys(attributes map[string]*Node) []string {
+	keys := make([]string, 0, len(attributes))
+	for name := range attributes {
+		keys = append(keys, name)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 // Builder creates schema models from parsed HCL variables.
