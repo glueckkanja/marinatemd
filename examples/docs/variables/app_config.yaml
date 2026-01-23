@@ -14,6 +14,7 @@ schema:
             _marinate:
                 description: '# TODO: Add description for ttl'
             type: number
+            default: "3600"
     database:
         _marinate:
             description: '# TODO: Add description for database'
@@ -27,7 +28,9 @@ schema:
             _marinate:
                 description: '# TODO: Add description for port'
             type: number
+            default: "5432"
         ssl_mode:
             _marinate:
                 description: '# TODO: Add description for ssl_mode'
             type: string
+            default: require

@@ -108,8 +108,11 @@ func (p *Parser) parseVariableBlock(block *hclsyntax.Block) (*Variable, error) {
 			}
 
 		case "default":
-			// We're skipping default handling per requirements
-			continue
+			// Extract default value
+			val, diags := attr.Expr.Value(nil)
+			if !diags.HasErrors() && !val.IsNull() {
+				variable.Default = extractCtyValue(val)
+			}
 		}
 	}
 
@@ -213,4 +216,50 @@ func ExtractMarinatedID(description string) (string, bool) {
 		return id, true
 	}
 	return "", false
+}
+
+// extractCtyValue converts a cty.Value to a Go value (any).
+// Handles primitive types, lists, sets, maps, and objects, excluding explicit nulls.
+func extractCtyValue(val cty.Value) any {
+	if val.IsNull() {
+		return nil
+	}
+
+	typ := val.Type()
+
+	switch {
+	case typ == cty.String:
+		return val.AsString()
+	case typ == cty.Number:
+		// Try to convert to int first, then float
+		bf := val.AsBigFloat()
+		if bf.IsInt() {
+			i, _ := bf.Int64()
+			return i
+		}
+		f, _ := bf.Float64()
+		return f
+	case typ == cty.Bool:
+		return val.True()
+	case typ.IsListType() || typ.IsSetType() || typ.IsTupleType():
+		var result []any
+		it := val.ElementIterator()
+		for it.Next() {
+			_, elemVal := it.Element()
+			result = append(result, extractCtyValue(elemVal))
+		}
+		return result
+	case typ.IsMapType() || typ.IsObjectType():
+		result := make(map[string]any)
+		it := val.ElementIterator()
+		for it.Next() {
+			keyVal, elemVal := it.Element()
+			key := keyVal.AsString()
+			result[key] = extractCtyValue(elemVal)
+		}
+		return result
+	}
+
+	// Fallback: return string representation
+	return val.AsString()
 }

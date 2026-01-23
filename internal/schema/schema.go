@@ -36,6 +36,7 @@ type Node struct {
 	Required    bool   `yaml:"required,omitempty"`     // Whether this field is required
 	ElementType string `yaml:"element_type,omitempty"` // For list/set types, the element type
 	ValueType   string `yaml:"value_type,omitempty"`   // For map types, the value type
+	Default     any    `yaml:"default,omitempty"`      // Default value for optional fields (exported if non-null)
 }
 
 // MarinateInfo contains user-editable documentation for a node.
@@ -63,6 +64,7 @@ func (n *Node) UnmarshalYAML(value *yaml.Node) error {
 		"required":     true,
 		"element_type": true,
 		"value_type":   true,
+		"default":      true,
 	}
 
 	// Iterate through the mapping node
@@ -94,6 +96,10 @@ func (n *Node) UnmarshalYAML(value *yaml.Node) error {
 		case "value_type":
 			if err := valueNode.Decode(&n.ValueType); err != nil {
 				return fmt.Errorf("failed to decode value_type: %w", err)
+			}
+		case "default":
+			if err := valueNode.Decode(&n.Default); err != nil {
+				return fmt.Errorf("failed to decode default: %w", err)
 			}
 		default:
 			// All other fields are child attributes
@@ -156,6 +162,16 @@ func (n *Node) MarshalYAML() (any, error) {
 		node.Content = append(node.Content,
 			&yaml.Node{Kind: yaml.ScalarNode, Value: "value_type"},
 			&yaml.Node{Kind: yaml.ScalarNode, Value: n.ValueType})
+	}
+
+	if n.Default != nil {
+		defaultValue := &yaml.Node{}
+		if err := defaultValue.Encode(n.Default); err != nil {
+			return nil, fmt.Errorf("failed to encode default: %w", err)
+		}
+		node.Content = append(node.Content,
+			&yaml.Node{Kind: yaml.ScalarNode, Value: "default"},
+			defaultValue)
 	}
 
 	// Add attributes in sorted order for deterministic output
@@ -303,9 +319,14 @@ func (b *Builder) parseFieldType(typeExpr string, node *Node, _fieldName string)
 
 	// Handle optional wrapper
 	if strings.HasPrefix(typeExpr, "optional(") {
-		innerType := extractFunctionArg(typeExpr, "optional")
-		// optional() can have a second argument (default value), extract only the first
-		innerType = extractFirstArg(innerType)
+		fullArgs := extractFunctionArg(typeExpr, "optional")
+		// optional() can have a second argument (default value)
+		innerType := extractFirstArg(fullArgs)
+		// Try to extract default value (second argument)
+		defaultValue := extractSecondArg(fullArgs)
+		if defaultValue != "" {
+			node.Default = parseDefaultValue(defaultValue)
+		}
 		return b.parseFieldType(innerType, node, _fieldName)
 	}
 
@@ -709,6 +730,7 @@ func (b *Builder) mergeNodes(newNode, existingNode *Node) *Node {
 		Required:    newNode.Required,
 		ElementType: newNode.ElementType,
 		ValueType:   newNode.ValueType,
+		Default:     newNode.Default,
 		Attributes:  make(map[string]*Node),
 	}
 
@@ -759,4 +781,157 @@ func (b *Builder) mergeMarinateInfo(newInfo, existingInfo *MarinateInfo) *Marina
 func (b *Builder) isTODO(desc string) bool {
 	re := regexp.MustCompile(`(?i)#\s*TODO`)
 	return re.MatchString(desc)
+}
+
+// extractSecondArg extracts the second argument from a comma-separated list.
+// Returns empty string if there's no second argument.
+func extractSecondArg(args string) string {
+	depth := 0
+	for i, ch := range args {
+		switch ch {
+		case '(', '{', '[':
+			depth++
+		case ')', '}', ']':
+			depth--
+		case ',':
+			if depth == 0 {
+				// Found the comma, return everything after it (trimmed)
+				secondArg := strings.TrimSpace(args[i+1:])
+				return secondArg
+			}
+		}
+	}
+	return ""
+}
+
+// parseDefaultValue converts a default value string from HCL to a Go value.
+// This handles strings, numbers, bools, lists, and maps.
+func parseDefaultValue(defaultStr string) any {
+	defaultStr = strings.TrimSpace(defaultStr)
+
+	// Handle null
+	if defaultStr == "null" {
+		return nil
+	}
+
+	// Handle boolean
+	if defaultStr == "true" {
+		return true
+	}
+	if defaultStr == "false" {
+		return false
+	}
+
+	// Handle strings (quoted)
+	if strings.HasPrefix(defaultStr, "\"") && strings.HasSuffix(defaultStr, "\"") {
+		// Unescape the string
+		unquoted := defaultStr[1 : len(defaultStr)-1]
+		return unquoted
+	}
+
+	// Handle empty list
+	if defaultStr == "[]" {
+		return []any{}
+	}
+
+	// Handle list
+	if strings.HasPrefix(defaultStr, "[") && strings.HasSuffix(defaultStr, "]") {
+		return parseListDefault(defaultStr)
+	}
+
+	// Handle empty map/object
+	if defaultStr == "{}" {
+		return map[string]any{}
+	}
+
+	// Handle map/object
+	if strings.HasPrefix(defaultStr, "{") && strings.HasSuffix(defaultStr, "}") {
+		return parseMapDefault(defaultStr)
+	}
+
+	// Try to parse as number
+	// For simplicity, we'll return the string as-is since YAML can handle numeric strings
+	// This avoids complex float/int parsing
+	return defaultStr
+}
+
+// parseListDefault parses a list default value like ["a", "b"] or [1, 2].
+func parseListDefault(listStr string) []any {
+	listStr = strings.TrimSpace(listStr)
+	if listStr == "[]" {
+		return []any{}
+	}
+
+	// Remove brackets
+	content := listStr[1 : len(listStr)-1]
+	content = strings.TrimSpace(content)
+
+	if content == "" {
+		return []any{}
+	}
+
+	// Split by comma, respecting nested structures
+	items := splitByComma(content)
+	result := make([]any, 0, len(items))
+
+	for _, item := range items {
+		item = strings.TrimSpace(item)
+		result = append(result, parseDefaultValue(item))
+	}
+
+	return result
+}
+
+// parseMapDefault parses a map/object default value.
+func parseMapDefault(mapStr string) map[string]any {
+	mapStr = strings.TrimSpace(mapStr)
+	if mapStr == "{}" {
+		return map[string]any{}
+	}
+
+	// Remove braces
+	content := mapStr[1 : len(mapStr)-1]
+	content = strings.TrimSpace(content)
+
+	if content == "" {
+		return map[string]any{}
+	}
+
+	// For now, return a simple representation
+	// Full parsing would require more complex logic
+	return map[string]any{}
+}
+
+// splitByComma splits a string by commas, respecting nested brackets.
+func splitByComma(s string) []string {
+	var result []string
+	var current strings.Builder
+	depth := 0
+
+	for _, ch := range s {
+		switch ch {
+		case '(', '{', '[':
+			depth++
+			current.WriteRune(ch)
+		case ')', '}', ']':
+			depth--
+			current.WriteRune(ch)
+		case ',':
+			if depth == 0 {
+				result = append(result, current.String())
+				current.Reset()
+			} else {
+				current.WriteRune(ch)
+			}
+		default:
+			current.WriteRune(ch)
+		}
+	}
+
+	// Add the last item
+	if current.Len() > 0 {
+		result = append(result, current.String())
+	}
+
+	return result
 }
