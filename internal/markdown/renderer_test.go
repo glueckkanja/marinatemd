@@ -288,3 +288,95 @@ func TestInjectIntoFile(t *testing.T) {
 func TestFindMarkers(t *testing.T) {
 	t.Skip("Not implemented yet")
 }
+
+func TestRenderSchema_WithObjectSeparators(t *testing.T) {
+	tests := []struct {
+		name         string
+		separators   []ObjectSeparator
+		expectedText string
+		notExpected  string
+	}{
+		{
+			name:         "no separators",
+			separators:   []ObjectSeparator{},
+			expectedText: "`parent`",
+			notExpected:  "---",
+		},
+		{
+			name: "blank separator at level 0",
+			separators: []ObjectSeparator{
+				{Level: 0, Style: SeparatorStyleBlank, Count: 1},
+			},
+			expectedText: "`parent`",
+			notExpected:  "---", // Blank lines, not horizontal rules
+		},
+		{
+			name: "line separator at level 0",
+			separators: []ObjectSeparator{
+				{Level: 0, Style: SeparatorStyleLine},
+			},
+			expectedText: "---", // Should have horizontal rule between child objects
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &TemplateConfig{
+				AttributeTemplate: "{attribute} - ({required}) {description}",
+				RequiredText:      "Required",
+				OptionalText:      "Optional",
+				EscapeMode:        "inline_code",
+				IndentStyle:       "bullets",
+				IndentSize:        2,
+				ObjectSeparators:  tt.separators,
+			}
+
+			// Create schema with nested objects
+			s := &schema.Schema{
+				Variable: "test_var",
+				Version:  "1",
+				SchemaNodes: map[string]*schema.Node{
+					"parent": {
+						Type:     "object",
+						Required: false,
+						Marinate: &schema.MarinateInfo{
+							Description: "Parent object",
+						},
+						Attributes: map[string]*schema.Node{
+							"child1": {
+								Type:     "object",
+								Required: false,
+								Marinate: &schema.MarinateInfo{
+									Description: "First child object",
+								},
+								Attributes: map[string]*schema.Node{},
+							},
+							"child2": {
+								Type:     "object",
+								Required: false,
+								Marinate: &schema.MarinateInfo{
+									Description: "Second child object",
+								},
+								Attributes: map[string]*schema.Node{},
+							},
+						},
+					},
+				},
+			}
+
+			r := NewRendererWithTemplate(cfg)
+			result, err := r.RenderSchema(s)
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+
+			if !strings.Contains(result, tt.expectedText) {
+				t.Errorf("Expected to find %q in result:\n%s", tt.expectedText, result)
+			}
+
+			if tt.notExpected != "" && strings.Contains(result, tt.notExpected) {
+				t.Errorf("Did not expect to find %q in result:\n%s", tt.notExpected, result)
+			}
+		})
+	}
+}

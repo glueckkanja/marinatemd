@@ -92,8 +92,24 @@ func (r *Renderer) renderNode(name string, node *schema.Node, depth int, builder
 		}
 		sort.Strings(attrNames)
 
-		for _, attrName := range attrNames {
+		// Track if we need separators for this level
+		isObjectType := node.Type == "object"
+		var separator *ObjectSeparator
+		if isObjectType {
+			separator = r.templateCfg.GetSeparatorForLevel(depth)
+		}
+
+		for i, attrName := range attrNames {
 			attr := node.Attributes[attrName]
+
+			// Insert separator before child object nodes (but not before the first one)
+			if separator != nil && i > 0 && attr.Type == "object" {
+				separatorText := r.templateCfg.RenderSeparator(separator)
+				if separatorText != "" {
+					builder.WriteString(separatorText)
+				}
+			}
+
 			if err := r.renderNode(attrName, attr, depth+1, builder); err != nil {
 				return err
 			}

@@ -61,6 +61,45 @@ markdown_template:
   # Default: 2
   indent_size: 2
 
+  # Visual separation for nested objects at specific depth levels
+  # This allows you to add visual breaks (blank lines, horizontal rules) between
+  # nested object attributes to improve readability in deeply nested schemas.
+  # If not specified or empty, no separators are added (default behavior).
+  #
+  # Each separator rule specifies:
+  #   - level: The nesting depth to apply this rule (0 = top-level, 1 = first nested level, etc.)
+  #            Use -1 to apply to all levels
+  #   - style: The type of separator ("none", "blank", "line", "fence")
+  #            - "none": No separation
+  #            - "blank": Insert blank line(s)
+  #            - "line" or "fence": Insert horizontal rule (---)
+  #   - count: Number of blank lines to insert (only for style: "blank", default: 1)
+  #
+  # Rules are applied in order, with later rules overriding earlier ones for the same level.
+  # Separators are inserted between child object nodes at the specified depth.
+  #
+  # Examples:
+  # object_separators:
+  #   # Add a blank line between objects at depth 2
+  #   - level: 2
+  #     style: blank
+  #     count: 1
+  #
+  #   # Add a horizontal line between all nested objects
+  #   - level: -1
+  #     style: line
+  #
+  #   # Add 2 blank lines at depth 1, single line at depth 2
+  #   - level: 1
+  #     style: blank
+  #     count: 2
+  #   - level: 2
+  #     style: blank
+  #     count: 1
+  #
+  # Default: [] (no separators)
+  # object_separators: []
+
 # Split command configuration
 # Controls how the split command extracts MARINATED variables into separate files
 split:
