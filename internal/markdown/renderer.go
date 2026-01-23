@@ -52,8 +52,21 @@ func (r *Renderer) RenderSchema(s *schema.Schema) (string, error) {
 	}
 	sort.Strings(nodeNames)
 
-	for _, nodeName := range nodeNames {
+	// Get separator for level 0 (root attributes)
+	separator := r.templateCfg.GetSeparatorForLevel(0)
+
+	for i, nodeName := range nodeNames {
 		node := s.SchemaNodes[nodeName]
+
+		// Insert separator before root-level object nodes (except the first one)
+		if separator != nil && i > 0 && node.Type == "object" {
+			indent := r.templateCfg.FormatIndent(0)
+			separatorText := r.templateCfg.RenderSeparator(separator, indent)
+			if separatorText != "" {
+				builder.WriteString(separatorText)
+			}
+		}
+
 		if err := r.renderNode(nodeName, node, 0, &builder); err != nil {
 			return "", fmt.Errorf("failed to render node %s: %w", nodeName, err)
 		}
@@ -100,14 +113,15 @@ func (r *Renderer) renderNodeContent(name string, node *schema.Node, depth int, 
 // renderNodeChildren renders all child attributes of a node.
 func (r *Renderer) renderNodeChildren(node *schema.Node, depth int, builder *strings.Builder) error {
 	attrNames := r.getSortedAttributeNames(node)
-	separator := r.getSeparatorForNode(node, depth)
+	childDepth := depth + 1
+	separator := r.getSeparatorForNode(node, childDepth)
 
 	for i, attrName := range attrNames {
 		attr := node.Attributes[attrName]
 
-		r.insertSeparatorIfNeeded(separator, i, attr, builder)
+		r.insertSeparatorIfNeeded(separator, i, attr, childDepth, builder)
 
-		if err := r.renderNode(attrName, attr, depth+1, builder); err != nil {
+		if err := r.renderNode(attrName, attr, childDepth, builder); err != nil {
 			return err
 		}
 	}
@@ -126,9 +140,13 @@ func (r *Renderer) getSortedAttributeNames(node *schema.Node) []string {
 }
 
 // getSeparatorForNode determines if separators should be used for this node's children.
-func (r *Renderer) getSeparatorForNode(node *schema.Node, depth int) *ObjectSeparator {
+// The depth parameter should be the depth of the children being rendered, not the parent.
+// Separators are only applied to children of object types (not lists, even if they contain objects).
+func (r *Renderer) getSeparatorForNode(node *schema.Node, childDepth int) *ObjectSeparator {
+	// Only apply separators to children of object nodes
+	// Lists are not included even if they have element_type=object
 	if node.Type == "object" {
-		return r.templateCfg.GetSeparatorForLevel(depth)
+		return r.templateCfg.GetSeparatorForLevel(childDepth)
 	}
 	return nil
 }
@@ -138,13 +156,15 @@ func (r *Renderer) insertSeparatorIfNeeded(
 	separator *ObjectSeparator,
 	index int,
 	attr *schema.Node,
+	depth int,
 	builder *strings.Builder,
 ) {
 	if separator == nil || index == 0 || attr.Type != "object" {
 		return
 	}
 
-	separatorText := r.templateCfg.RenderSeparator(separator)
+	indent := r.templateCfg.FormatIndent(depth)
+	separatorText := r.templateCfg.RenderSeparator(separator, indent)
 	if separatorText != "" {
 		builder.WriteString(separatorText)
 	}

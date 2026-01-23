@@ -60,7 +60,9 @@ type TemplateConfig struct {
 
 // ObjectSeparator defines how to visually separate nested objects at a specific depth level.
 type ObjectSeparator struct {
-	// Level is the nesting depth at which to apply this separator (0 = top-level).
+	// Level is the nesting depth at which to apply this separator.
+	// Level 0 = root schema attributes (top-level keys in the YAML schema)
+	// Level 1 = attributes nested one level deep
 	// Use -1 to apply to all levels, or >= 0 for specific levels.
 	Level int `mapstructure:"level" yaml:"level"`
 
@@ -252,7 +254,8 @@ func (tc *TemplateConfig) GetSeparatorForLevel(depth int) *ObjectSeparator {
 }
 
 // RenderSeparator returns the markdown string for a separator based on its style.
-func (tc *TemplateConfig) RenderSeparator(sep *ObjectSeparator) string {
+// The indent string should be provided to properly format the separator within lists.
+func (tc *TemplateConfig) RenderSeparator(sep *ObjectSeparator, indent string) string {
 	if sep == nil || sep.Style == SeparatorStyleNone {
 		return ""
 	}
@@ -265,6 +268,12 @@ func (tc *TemplateConfig) RenderSeparator(sep *ObjectSeparator) string {
 		}
 		return strings.Repeat("\n", count)
 	case SeparatorStyleLine, SeparatorStyleFence:
+		// When inside a list (indent contains bullets), we need to indent the separator
+		if strings.Contains(indent, "-") {
+			// Extract just the spaces (remove the "- " part)
+			spaceIndent := strings.TrimSuffix(indent, "- ")
+			return "\n" + spaceIndent + "---\n\n"
+		}
 		return "\n---\n\n"
 	default:
 		return ""

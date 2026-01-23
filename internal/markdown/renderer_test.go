@@ -303,17 +303,17 @@ func TestRenderSchema_WithObjectSeparators(t *testing.T) {
 			notExpected:  "---",
 		},
 		{
-			name: "blank separator at level 0",
+			name: "blank separator at level 1",
 			separators: []ObjectSeparator{
-				{Level: 0, Style: SeparatorStyleBlank, Count: 1},
+				{Level: 1, Style: SeparatorStyleBlank, Count: 1},
 			},
 			expectedText: "`parent`",
 			notExpected:  "---", // Blank lines, not horizontal rules
 		},
 		{
-			name: "line separator at level 0",
+			name: "line separator at level 1",
 			separators: []ObjectSeparator{
-				{Level: 0, Style: SeparatorStyleLine},
+				{Level: 1, Style: SeparatorStyleLine},
 			},
 			expectedText: "---", // Should have horizontal rule between child objects
 		},

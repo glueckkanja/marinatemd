@@ -9,9 +9,7 @@ markdown_template:
   indent_style: "bullets"
   indent_size: 2
   object_separators:
-    - level: 1
-      style: "line"
-    - level: 2
+    - level: 0
       style: "line"
 
 split:

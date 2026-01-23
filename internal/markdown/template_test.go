@@ -380,43 +380,68 @@ func TestRenderSeparator(t *testing.T) {
 	tests := []struct {
 		name      string
 		separator *ObjectSeparator
+		indent    string
 		expected  string
 	}{
 		{
 			name:      "nil separator",
 			separator: nil,
+			indent:    "",
 			expected:  "",
 		},
 		{
 			name:      "none style",
 			separator: &ObjectSeparator{Level: 1, Style: SeparatorStyleNone},
+			indent:    "",
 			expected:  "",
 		},
 		{
 			name:      "blank style with count 1",
 			separator: &ObjectSeparator{Level: 1, Style: SeparatorStyleBlank, Count: 1},
+			indent:    "",
 			expected:  "\n",
 		},
 		{
 			name:      "blank style with count 2",
 			separator: &ObjectSeparator{Level: 1, Style: SeparatorStyleBlank, Count: 2},
+			indent:    "",
 			expected:  "\n\n",
 		},
 		{
-			name:      "line style",
+			name:      "line style without indent",
 			separator: &ObjectSeparator{Level: 1, Style: SeparatorStyleLine},
+			indent:    "",
 			expected:  "\n---\n\n",
 		},
 		{
-			name:      "fence style",
+			name:      "fence style without indent",
 			separator: &ObjectSeparator{Level: 1, Style: SeparatorStyleFence},
+			indent:    "",
 			expected:  "\n---\n\n",
+		},
+		{
+			name:      "line style with bullet indent (level 1)",
+			separator: &ObjectSeparator{Level: 1, Style: SeparatorStyleLine},
+			indent:    "  - ",
+			expected:  "\n  ---\n\n",
+		},
+		{
+			name:      "line style with bullet indent (level 2)",
+			separator: &ObjectSeparator{Level: 2, Style: SeparatorStyleLine},
+			indent:    "    - ",
+			expected:  "\n    ---\n\n",
+		},
+		{
+			name:      "fence style with bullet indent",
+			separator: &ObjectSeparator{Level: 1, Style: SeparatorStyleFence},
+			indent:    "  - ",
+			expected:  "\n  ---\n\n",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := cfg.RenderSeparator(tt.separator)
+			result := cfg.RenderSeparator(tt.separator, tt.indent)
 			if result != tt.expected {
 				t.Errorf("Expected %q, got %q", tt.expected, result)
 			}
