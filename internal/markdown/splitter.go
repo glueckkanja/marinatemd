@@ -71,6 +71,8 @@ func (s *Splitter) ExtractSections(filePath string) ([]VariableSection, error) {
 }
 
 // extractSectionsFromContent parses markdown content and extracts variable sections.
+// Only MARINATED variables are extracted, but the entire variable section is captured
+// including Type:, Default:, and any subsections like "### Advanced Settings".
 func (s *Splitter) extractSectionsFromContent(content string) ([]VariableSection, error) {
 	var sections []VariableSection
 	marinatedMarkerRe := regexp.MustCompile(`<!-- MARINATED:\s*(\S+?)\s*-->`)
@@ -83,12 +85,20 @@ func (s *Splitter) extractSectionsFromContent(content string) ([]VariableSection
 	for i, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
 
+		// Check if this is a potential new variable definition (### heading)
 		if isVariableHeading(trimmedLine) {
-			sections = saveCurrentSection(currentSection, sectionLines, sections)
-			currentSection, sectionLines, inSection = startNewSection(line, lines, i, marinatedMarkerRe)
-			continue
+			// Look ahead to see if this is actually a NEW variable (has Type:/Default:)
+			// or just a subsection within the current variable (like "### Advanced Settings")
+			if isNewVariableStart(lines, i) {
+				// Save the previous section if it exists
+				sections = saveCurrentSection(currentSection, sectionLines, sections)
+				currentSection, sectionLines, inSection = startNewSection(line, lines, i, marinatedMarkerRe)
+				continue
+			}
+			// Otherwise, it's a subsection - keep collecting if we're in a section
 		}
 
+		// Major headings always end the current section
 		if isMajorHeading(trimmedLine) {
 			sections = saveCurrentSection(currentSection, sectionLines, sections)
 			currentSection = nil
@@ -97,6 +107,7 @@ func (s *Splitter) extractSectionsFromContent(content string) ([]VariableSection
 			continue
 		}
 
+		// Collect all lines when in a section
 		if inSection && currentSection != nil {
 			sectionLines = append(sectionLines, line)
 		}
@@ -105,6 +116,32 @@ func (s *Splitter) extractSectionsFromContent(content string) ([]VariableSection
 	// Save the last section
 	sections = saveCurrentSection(currentSection, sectionLines, sections)
 	return sections, nil
+}
+
+// isNewVariableStart checks if a ### heading is the start of a new variable definition.
+// A true variable heading is followed by "Description:" within a few lines.
+// Subsection headings (like "### Advanced Settings") are NOT followed by "Description:".
+func isNewVariableStart(lines []string, headingIndex int) bool {
+	// Look for "Description:" which terraform-docs puts right after variable headings
+	maxLookAhead := 15 // Variables have Description: very close to the heading
+	endIndex := min(headingIndex+maxLookAhead, len(lines))
+
+	for j := headingIndex + 1; j < endIndex; j++ {
+		trimmed := strings.TrimSpace(lines[j])
+
+		// Real variables have "Description:" within a few lines
+		if strings.HasPrefix(trimmed, "Description:") {
+			return true
+		}
+
+		// If we hit another heading before finding Description:, it's not a variable
+		if isVariableHeading(trimmed) || isMajorHeading(trimmed) {
+			return false
+		}
+	}
+
+	// If we didn't find Description: within reasonable distance, it's a subsection
+	return false
 }
 
 func isVariableHeading(line string) bool {
@@ -139,15 +176,23 @@ func startNewSection(
 }
 
 func findMarinatedMarker(lines []string, startIndex int, marinatedMarkerRe *regexp.Regexp) *VariableSection {
-	maxLookAhead := 10
+	maxLookAhead := 50 // Increased to handle sections with subsections like "### Attributes"
 	endIndex := min(startIndex+1+maxLookAhead, len(lines))
 
 	for j := startIndex + 1; j < endIndex; j++ {
+		trimmed := strings.TrimSpace(lines[j])
+
 		if matches := marinatedMarkerRe.FindStringSubmatch(lines[j]); matches != nil {
 			variableName := strings.ReplaceAll(matches[1], "\\_", "_")
 			return &VariableSection{VariableName: variableName}
 		}
-		if isVariableHeading(strings.TrimSpace(lines[j])) || isMajorHeading(strings.TrimSpace(lines[j])) {
+
+		// Stop searching if we hit another variable heading (one with Description:)
+		// or a major heading - this means we've moved past the current variable
+		if isVariableHeading(trimmed) && isNewVariableStart(lines, j) {
+			break
+		}
+		if isMajorHeading(trimmed) {
 			break
 		}
 	}
