@@ -35,13 +35,14 @@ type Node struct {
 // MarinateInfo contains all schema metadata for a node.
 // This includes both user-editable documentation and technical schema fields.
 type MarinateInfo struct {
-	Description string `yaml:"description,omitempty"`  // User-editable description
-	Example     any    `yaml:"example,omitempty"`      // Example value for documentation
-	Type        string `yaml:"type,omitempty"`         // Type information (string, number, bool, object, list, map, etc.)
-	Required    bool   `yaml:"required,omitempty"`     // Whether this field is required
-	ElementType string `yaml:"element_type,omitempty"` // For list/set types, the element type
-	ValueType   string `yaml:"value_type,omitempty"`   // For map types, the value type
-	Default     any    `yaml:"default,omitempty"`      // Default value for optional fields
+	Description     string `yaml:"description,omitempty"`      // User-editable description
+	ShowDescription *bool  `yaml:"show_description,omitempty"` // Control visibility of description in rendered output (nil = true by default)
+	Example         any    `yaml:"example,omitempty"`          // Example value for documentation
+	Type            string `yaml:"type,omitempty"`             // Type information (string, number, bool, object, list, map, etc.)
+	Required        bool   `yaml:"required,omitempty"`         // Whether this field is required
+	ElementType     string `yaml:"element_type,omitempty"`     // For list/set types, the element type
+	ValueType       string `yaml:"value_type,omitempty"`       // For map types, the value type
+	Default         any    `yaml:"default,omitempty"`          // Default value for optional fields
 }
 
 // UnmarshalYAML implements custom YAML unmarshaling for Node.

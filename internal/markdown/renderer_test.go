@@ -267,3 +267,192 @@ func TestInjectIntoFile(t *testing.T) {
 func TestFindMarkers(t *testing.T) {
 	t.Skip("Not implemented yet")
 }
+
+func TestRenderSchema_ShowDescriptionDefault(t *testing.T) {
+	// When ShowDescription is nil (omitted), description should be shown by default
+	s := &schema.Schema{
+		Variable: "test_var",
+		Version:  "1",
+		SchemaNodes: map[string]*schema.Node{
+			"field1": {
+				Marinate: &schema.MarinateInfo{
+					Description:     "This description should be visible",
+					ShowDescription: nil, // Omitted - defaults to true
+					Required:        true,
+				},
+				Attributes: map[string]*schema.Node{},
+			},
+		},
+	}
+
+	r := NewRenderer()
+	result, err := r.RenderSchema(s)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	// Description should be present in output
+	if !strings.Contains(result, "This description should be visible") {
+		t.Error("Expected description to be visible when ShowDescription is nil (default)")
+	}
+	if !strings.Contains(result, "`field1`") {
+		t.Error("Expected field1 attribute in output")
+	}
+}
+
+func TestRenderSchema_ShowDescriptionExplicitlyFalse(t *testing.T) {
+	// When ShowDescription is explicitly false, description should be hidden
+	showDesc := false
+	s := &schema.Schema{
+		Variable: "test_var",
+		Version:  "1",
+		SchemaNodes: map[string]*schema.Node{
+			"field1": {
+				Marinate: &schema.MarinateInfo{
+					Description:     "This description should be hidden",
+					ShowDescription: &showDesc,
+					Required:        true,
+				},
+				Attributes: map[string]*schema.Node{},
+			},
+		},
+	}
+
+	r := NewRenderer()
+	result, err := r.RenderSchema(s)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	// Description should NOT be present in output
+	if strings.Contains(result, "This description should be hidden") {
+		t.Error("Expected description to be hidden when ShowDescription is false")
+	}
+	// The attribute itself should still be rendered (with name and required status)
+	if !strings.Contains(result, "`field1`") {
+		t.Error("Expected field1 attribute to be rendered even when description is hidden")
+	}
+	if !strings.Contains(result, "(Required)") {
+		t.Error("Expected Required marker to be present even when description is hidden")
+	}
+}
+
+func TestRenderSchema_ShowDescriptionExplicitlyTrue(t *testing.T) {
+	// When ShowDescription is explicitly true, description should be shown
+	showDesc := true
+	s := &schema.Schema{
+		Variable: "test_var",
+		Version:  "1",
+		SchemaNodes: map[string]*schema.Node{
+			"field1": {
+				Marinate: &schema.MarinateInfo{
+					Description:     "This description should be visible",
+					ShowDescription: &showDesc,
+					Required:        false,
+				},
+				Attributes: map[string]*schema.Node{},
+			},
+		},
+	}
+
+	r := NewRenderer()
+	result, err := r.RenderSchema(s)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	// Description should be present in output
+	if !strings.Contains(result, "This description should be visible") {
+		t.Error("Expected description to be visible when ShowDescription is true")
+	}
+	if !strings.Contains(result, "`field1`") {
+		t.Error("Expected field1 attribute in output")
+	}
+}
+
+func TestRenderSchema_ShowDescriptionWithNestedAttributes(t *testing.T) {
+	// Test that hiding parent description doesn't hide children
+	showDesc := false
+	s := &schema.Schema{
+		Variable: "test_var",
+		Version:  "1",
+		SchemaNodes: map[string]*schema.Node{
+			"parent": {
+				Marinate: &schema.MarinateInfo{
+					Description:     "Parent description should be hidden",
+					ShowDescription: &showDesc,
+				},
+				Attributes: map[string]*schema.Node{
+					"child": {
+						Marinate: &schema.MarinateInfo{
+							Description: "Child description should be visible",
+							Required:    true,
+						},
+						Attributes: map[string]*schema.Node{},
+					},
+				},
+			},
+		},
+	}
+
+	r := NewRenderer()
+	result, err := r.RenderSchema(s)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	// Parent description should be hidden
+	if strings.Contains(result, "Parent description should be hidden") {
+		t.Error("Expected parent description to be hidden")
+	}
+
+	// Parent attribute itself should still be rendered (for structure)
+	// Note: Depending on template, parent may or may not appear if it has no description
+	// But children should definitely be visible
+
+	// Child description should be visible
+	if !strings.Contains(result, "Child description should be visible") {
+		t.Error("Expected child description to be visible")
+	}
+	if !strings.Contains(result, "`child`") {
+		t.Error("Expected child attribute in output")
+	}
+}
+
+func TestRenderSchema_ShowDescriptionWithDefaults(t *testing.T) {
+	// Test that attribute with default value is rendered even without description
+	showDesc := false
+	s := &schema.Schema{
+		Variable: "test_var",
+		Version:  "1",
+		SchemaNodes: map[string]*schema.Node{
+			"port": {
+				Marinate: &schema.MarinateInfo{
+					Description:     "Database port number",
+					ShowDescription: &showDesc,
+					Type:            "number",
+					Required:        false,
+					Default:         5432,
+				},
+				Attributes: map[string]*schema.Node{},
+			},
+		},
+	}
+
+	r := NewRenderer()
+	result, err := r.RenderSchema(s)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	// Description should NOT be in output
+	if strings.Contains(result, "Database port number") {
+		t.Error("Expected description to be hidden")
+	}
+
+	// But the attribute should still be rendered
+	if !strings.Contains(result, "`port`") {
+		t.Error("Expected port attribute to be rendered")
+	}
+}
+

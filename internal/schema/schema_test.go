@@ -439,3 +439,74 @@ func TestMergeWithExisting_RemoveDeletedFields(t *testing.T) {
 		t.Error("expected 'host' field to be preserved")
 	}
 }
+
+func TestShowDescription_DefaultBehavior(t *testing.T) {
+	// When ShowDescription is nil (omitted), description should be visible by default
+	node := &schema.Node{
+		Marinate: &schema.MarinateInfo{
+			Description:     "This is a test description",
+			ShowDescription: nil, // Omitted - should default to showing description
+			Type:            "string",
+			Required:        true,
+		},
+		Attributes: map[string]*schema.Node{},
+	}
+
+	if node.Marinate.ShowDescription != nil {
+		t.Errorf("expected ShowDescription to be nil (omitted), got %v", *node.Marinate.ShowDescription)
+	}
+
+	// The description should be available
+	if node.Marinate.Description != "This is a test description" {
+		t.Errorf("expected description to be set, got %v", node.Marinate.Description)
+	}
+}
+
+func TestShowDescription_ExplicitlyHidden(t *testing.T) {
+	// When ShowDescription is explicitly false, description should be hidden
+	showDesc := false
+	node := &schema.Node{
+		Marinate: &schema.MarinateInfo{
+			Description:     "This description should be hidden",
+			ShowDescription: &showDesc,
+			Type:            "string",
+			Required:        true,
+		},
+		Attributes: map[string]*schema.Node{},
+	}
+
+	if node.Marinate.ShowDescription == nil {
+		t.Error("expected ShowDescription to be set")
+	} else if *node.Marinate.ShowDescription != false {
+		t.Error("expected ShowDescription to be false")
+	}
+
+	// The description is still present in the data, but won't be rendered
+	if node.Marinate.Description != "This description should be hidden" {
+		t.Errorf("expected description to be set, got %v", node.Marinate.Description)
+	}
+}
+
+func TestShowDescription_ExplicitlyShown(t *testing.T) {
+	// When ShowDescription is explicitly true, description should be shown
+	showDesc := true
+	node := &schema.Node{
+		Marinate: &schema.MarinateInfo{
+			Description:     "This description should be shown",
+			ShowDescription: &showDesc,
+			Type:            "string",
+			Required:        false,
+		},
+		Attributes: map[string]*schema.Node{},
+	}
+
+	if node.Marinate.ShowDescription == nil {
+		t.Error("expected ShowDescription to be set")
+	} else if *node.Marinate.ShowDescription != true {
+		t.Error("expected ShowDescription to be true")
+	}
+
+	if node.Marinate.Description != "This description should be shown" {
+		t.Errorf("expected description to be set, got %v", node.Marinate.Description)
+	}
+}

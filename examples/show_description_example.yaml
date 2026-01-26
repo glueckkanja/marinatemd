@@ -1,0 +1,63 @@
+# Example showing the show_description feature
+# This demonstrates how to control visibility of descriptions in rendered markdown
+
+variable: app_config
+version: "1"
+schema:
+  database:
+    _marinate:
+      description: "Database configuration settings"
+      type: object
+      required: false
+      # show_description is omitted - defaults to true (description will be shown)
+    host:
+      _marinate:
+        description: "The database hostname or IP address"
+        type: string
+        required: true
+        # Explicitly show the description
+        show_description: true
+    port:
+      _marinate:
+        description: "The database port number"
+        type: number
+        required: false
+        default: 5432
+        # Hide this description in the rendered output
+        show_description: false
+    credentials:
+      _marinate:
+        description: "Database credentials - hidden for security docs"
+        type: object
+        required: false
+        # Hide this entire section from the rendered docs
+        show_description: false
+      username:
+        _marinate:
+          description: "Database username"
+          type: string
+          required: true
+      password:
+        _marinate:
+          description: "Database password"
+          type: string
+          required: true
+
+  cache:
+    _marinate:
+      description: "Cache configuration settings"
+      type: object
+      required: false
+    redis_url:
+      _marinate:
+        description: "Redis connection URL"
+        type: string
+        required: true
+    ttl:
+      _marinate:
+        # This field has no show_description setting
+        # It will default to showing the description
+        description: "Time to live for cached items in seconds"
+        type: number
+        required: false
+        default: 3600

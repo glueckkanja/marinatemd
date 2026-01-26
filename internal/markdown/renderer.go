@@ -87,14 +87,36 @@ func (r *Renderer) renderNode(name string, node *schema.Node, depth int, builder
 
 // renderNodeContent renders the current node's content if it has documentation.
 func (r *Renderer) renderNodeContent(name string, node *schema.Node, depth int, builder *strings.Builder) {
-	if node.Marinate == nil || node.Marinate.Description == "" {
+	if node.Marinate == nil {
 		return
+	}
+
+	// Determine the description to use
+	description := node.Marinate.Description
+
+	// Check ShowDescription field - if nil (omitted), default to true
+	// If explicitly set to false, use empty description (but still render the attribute)
+	showDescription := true // Default behavior
+	if node.Marinate.ShowDescription != nil {
+		showDescription = *node.Marinate.ShowDescription
+	}
+
+	if !showDescription {
+		description = "" // Clear description but continue rendering
+	}
+
+	// Skip rendering if there's no description and no metadata to show
+	if description == "" && node.Marinate.Type == "" && !node.Marinate.Required {
+		// If there's truly nothing to render, skip it
+		if len(node.Attributes) == 0 {
+			return
+		}
 	}
 
 	ctx := TemplateContext{
 		Attribute:   name,
 		Required:    node.Marinate.Required,
-		Description: node.Marinate.Description,
+		Description: description,
 		Type:        node.Marinate.Type,
 	}
 
