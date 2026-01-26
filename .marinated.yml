@@ -29,15 +29,40 @@ verbose: false
 # Controls how variable documentation is rendered in markdown
 markdown_template:
   # Template for rendering individual attributes
-  # Available placeholders:
+  # Supports both simple placeholders and Go template syntax with conditionals.
+  #
+  # Simple placeholders (legacy, auto-converted to Go template syntax):
   #   {attribute}   - The attribute name
   #   {required}    - Required/Optional text
   #   {description} - The attribute description
   #   {type}        - The attribute type
   #   {default}     - Default value (if any)
   #   {example}     - Example value (if any)
-  # Default: "{attribute} - ({required}) {description}"
-  attribute_template: "{attribute} - ({required}) {description}"
+  #
+  # Go template syntax (recommended for conditional logic):
+  #   Available fields:
+  #     {{.Attribute}}   - The attribute name (pre-escaped based on escape_mode)
+  #     {{.Required}}    - Required/Optional text string
+  #     {{.IsRequired}}  - Boolean flag for required status
+  #     {{.Description}} - The attribute description
+  #     {{.Type}}        - The attribute type
+  #     {{.Default}}     - Default value string
+  #     {{.Example}}     - Example value string
+  #     {{.HasDefault}}  - Boolean: true if default value exists
+  #     {{.HasExample}}  - Boolean: true if example value exists
+  #     {{.HasType}}     - Boolean: true if type is specified
+  #
+  #   Conditional syntax:
+  #     {{if .HasDefault}} - Default: {{.Default}}{{end}}
+  #     {{if .IsRequired}}(Required){{else}}(Optional){{end}}
+  #
+  # Example templates:
+  #   Simple: "{attribute} - ({required}) {description}"
+  #   With default: "{{.Attribute}} - ({{.Required}}) {{.Description}}{{if .HasDefault}} - Default: {{.Default}}{{end}}"
+  #   Full featured: "{{.Attribute}} - {{.Description}}{{if .HasDefault}} [Default: {{.Default}}]{{end}}{{if .HasExample}} (e.g., {{.Example}}){{end}}"
+  #
+  # Default: "{{.Attribute}} - ({{.Required}}) {{.Description}}"
+  attribute_template: "{{.Attribute}} - ({{.Required}}) {{.Description}}{{if .HasDefault}} - Default: {{.Default}}{{end}}"
 
   # Text to display for required attributes
   # Default: "Required"

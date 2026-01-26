@@ -113,15 +113,61 @@ func (r *Renderer) renderNodeContent(name string, node *schema.Node, depth int, 
 		}
 	}
 
+	// Format default and example values for display
+	defaultStr := ""
+	hasDefault := false
+	if node.Marinate.Default != nil {
+		defaultStr = fmt.Sprintf("%v", node.Marinate.Default)
+		// If the default is an empty string, show it as "" to make it explicit
+		if defaultStr == "" {
+			defaultStr = `""`
+		}
+		// Replace map[] with {} for better readability (empty map/object)
+		if defaultStr == "map[]" {
+			defaultStr = "{}"
+		}
+		hasDefault = true // Default is present, even if it's an empty string
+	}
+
+	exampleStr := ""
+	hasExample := false
+	if node.Marinate.Example != nil {
+		exampleStr = fmt.Sprintf("%v", node.Marinate.Example)
+		// If the example is an empty string, show it as "" to make it explicit
+		if exampleStr == "" {
+			exampleStr = `""`
+		}
+		// Replace map[] with {} for better readability (empty map/object)
+		if exampleStr == "map[]" {
+			exampleStr = "{}"
+		}
+		hasExample = true // Example is present, even if it's an empty string
+	}
+
+	// Determine required/optional text
+	requiredText := r.templateCfg.OptionalText
+	isRequired := node.Marinate.Required
+	if isRequired {
+		requiredText = r.templateCfg.RequiredText
+	}
+
 	ctx := TemplateContext{
 		Attribute:   name,
-		Required:    node.Marinate.Required,
+		Required:    requiredText,
+		IsRequired:  isRequired,
 		Description: description,
 		Type:        node.Marinate.Type,
+		Default:     defaultStr,
+		Example:     exampleStr,
+		HasDefault:  hasDefault,
+		HasExample:  hasExample,
+		HasType:     node.Marinate.Type != "",
 	}
 
 	indent := r.templateCfg.FormatIndent(depth)
 	rendered := r.templateCfg.RenderAttribute(ctx)
+	// Trim trailing whitespace from the rendered line
+	rendered = strings.TrimRight(rendered, " \t")
 	builder.WriteString(indent)
 	builder.WriteString(rendered)
 	builder.WriteString("\n")

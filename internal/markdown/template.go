@@ -1,9 +1,11 @@
 package markdown
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"strings"
+	"text/template"
 )
 
 const (
@@ -14,8 +16,17 @@ const (
 // TemplateConfig defines how markdown is generated from schema fields.
 type TemplateConfig struct {
 	// AttributeTemplate defines the format for rendering individual attributes.
-	// Supports placeholders: {attribute}, {required}, {description}, {type}, {default}, {example}
-	// Default: "{attribute} - ({required}) {description}"
+	// Supports Go template syntax with conditionals and functions.
+	// Available fields: .Attribute, .Required, .Description, .Type, .Default, .Example
+	// Available booleans: .IsRequired, .HasDefault, .HasExample, .HasType
+	//
+	// Simple placeholders (legacy, auto-converted):
+	//   {attribute}, {required}, {description}, {type}, {default}, {example}
+	//
+	// Go template syntax (recommended for conditionals):
+	//   {{.Attribute}} - ({{.Required}}) {{.Description}}{{if .HasDefault}} - Default: {{.Default}}{{end}}
+	//
+	// Default: "{{.Attribute}} - ({{.Required}}) {{.Description}}"
 	AttributeTemplate string `mapstructure:"attribute_template" yaml:"attribute_template"`
 
 	// RequiredText is the text to display when an attribute is required.
@@ -44,12 +55,15 @@ type TemplateConfig struct {
 	// Empty list or nil means no separators. Can specify multiple levels.
 	// Example: [0, 2] will add separators at depth 0 and depth 2
 	SeparatorIndents []int `mapstructure:"separator_indents" yaml:"separator_indents"`
+
+	// compiledTemplate holds the parsed Go template (internal use)
+	compiledTemplate *template.Template
 }
 
 // DefaultTemplateConfig returns the default template configuration.
 func DefaultTemplateConfig() *TemplateConfig {
-	return &TemplateConfig{
-		AttributeTemplate: "{attribute} - ({required}) {description}",
+	cfg := &TemplateConfig{
+		AttributeTemplate: "{{.Attribute}} - ({{.Required}}) {{.Description}}",
 		RequiredText:      "Required",
 		OptionalText:      "Optional",
 		EscapeMode:        "inline_code",
@@ -57,42 +71,111 @@ func DefaultTemplateConfig() *TemplateConfig {
 		IndentSize:        DefaultIndentSize,
 		SeparatorIndents:  []int{}, // No separators by default
 	}
+	// Compile the template immediately
+	_ = cfg.compileTemplate()
+	return cfg
 }
 
 // TemplateContext holds the data for rendering a single attribute.
 type TemplateContext struct {
 	Attribute   string
-	Required    bool
+	Required    string // String representation ("Required" or "Optional")
+	IsRequired  bool   // Boolean flag for conditional checks
 	Description string
 	Type        string
 	Default     string
 	Example     string
+	HasDefault  bool // Helper for conditionals
+	HasExample  bool // Helper for conditionals
+	HasType     bool // Helper for conditionals
+}
+
+// compileTemplate compiles the attribute template into a Go template.
+// It supports both legacy {placeholder} syntax and Go template {{.Field}} syntax.
+func (tc *TemplateConfig) compileTemplate() error {
+	// Convert legacy placeholders to Go template syntax
+	templateStr := tc.convertLegacyPlaceholders(tc.AttributeTemplate)
+
+	// Create template with helper functions
+	tmpl := template.New("attribute").Funcs(template.FuncMap{
+		"escape": tc.escape,
+	})
+
+	var err error
+	tc.compiledTemplate, err = tmpl.Parse(templateStr)
+	if err != nil {
+		return fmt.Errorf("failed to compile template: %w", err)
+	}
+
+	return nil
+}
+
+// convertLegacyPlaceholders converts old {placeholder} syntax to {{.Field}} syntax
+// for backward compatibility.
+func (tc *TemplateConfig) convertLegacyPlaceholders(tmpl string) string {
+	// Only convert if the template uses legacy syntax
+	if !strings.Contains(tmpl, "{{") && strings.Contains(tmpl, "{") {
+		replacements := map[string]string{
+			"{attribute}":   "{{.Attribute}}",
+			"{required}":    "{{.Required}}",
+			"{description}": "{{.Description}}",
+			"{type}":        "{{.Type}}",
+			"{default}":     "{{.Default}}",
+			"{example}":     "{{.Example}}",
+		}
+		for old, new := range replacements {
+			tmpl = strings.ReplaceAll(tmpl, old, new)
+		}
+	}
+	return tmpl
 }
 
 // RenderAttribute applies the template to a context and returns the formatted string.
 func (tc *TemplateConfig) RenderAttribute(ctx TemplateContext) string {
-	template := tc.AttributeTemplate
-
-	// Determine required/optional text
-	requiredText := tc.OptionalText
-	if ctx.Required {
-		requiredText = tc.RequiredText
+	// Ensure template is compiled
+	if tc.compiledTemplate == nil {
+		if err := tc.compileTemplate(); err != nil {
+			// Fallback to simple replacement if template compilation fails
+			return tc.renderLegacy(ctx)
+		}
 	}
 
-	// Apply escaping to attribute name based on escape mode
+	// Apply escaping to attribute name
+	ctx.Attribute = tc.escape(ctx.Attribute)
+
+	// Execute template
+	var buf bytes.Buffer
+	if err := tc.compiledTemplate.Execute(&buf, ctx); err != nil {
+		// Fallback to legacy rendering on error
+		return tc.renderLegacy(ctx)
+	}
+
+	return buf.String()
+}
+
+// renderLegacy provides fallback rendering using simple string replacement.
+func (tc *TemplateConfig) renderLegacy(ctx TemplateContext) string {
+	result := tc.AttributeTemplate
+
+	// Apply escaping to attribute name
 	escapedAttribute := tc.escape(ctx.Attribute)
 
 	// Replace placeholders
 	replacements := map[string]string{
-		"{attribute}":   escapedAttribute,
-		"{required}":    requiredText,
-		"{description}": ctx.Description,
-		"{type}":        ctx.Type,
-		"{default}":     ctx.Default,
-		"{example}":     ctx.Example,
+		"{attribute}":      escapedAttribute,
+		"{{.Attribute}}":   escapedAttribute,
+		"{required}":       ctx.Required,
+		"{{.Required}}":    ctx.Required,
+		"{description}":    ctx.Description,
+		"{{.Description}}": ctx.Description,
+		"{type}":           ctx.Type,
+		"{{.Type}}":        ctx.Type,
+		"{default}":        ctx.Default,
+		"{{.Default}}":     ctx.Default,
+		"{example}":        ctx.Example,
+		"{{.Example}}":     ctx.Example,
 	}
 
-	result := template
 	for placeholder, value := range replacements {
 		result = strings.ReplaceAll(result, placeholder, value)
 	}
@@ -127,9 +210,17 @@ func (tc *TemplateConfig) FormatIndent(depth int) string {
 
 // Validate checks if the template configuration is valid.
 func (tc *TemplateConfig) Validate() error {
-	// Check for required placeholders in template
-	if !strings.Contains(tc.AttributeTemplate, "{attribute}") {
-		return errors.New("attribute_template must contain {attribute} placeholder")
+	// Try to compile the template (this also does legacy conversion)
+	if err := tc.compileTemplate(); err != nil {
+		return fmt.Errorf("invalid attribute_template: %w", err)
+	}
+
+	// Check for required placeholders AFTER legacy conversion
+	// Use convertLegacyPlaceholders to get the actual template that will be used
+	convertedTemplate := tc.convertLegacyPlaceholders(tc.AttributeTemplate)
+	hasAttribute := strings.Contains(convertedTemplate, "{{.Attribute}}")
+	if !hasAttribute {
+		return errors.New("attribute_template must contain {attribute} or {{.Attribute}} placeholder")
 	}
 
 	// Validate escape mode

@@ -8,7 +8,7 @@ import (
 func TestDefaultTemplateConfig(t *testing.T) {
 	cfg := DefaultTemplateConfig()
 
-	if cfg.AttributeTemplate != "{attribute} - ({required}) {description}" {
+	if cfg.AttributeTemplate != "{{.Attribute}} - ({{.Required}}) {{.Description}}" {
 		t.Errorf("Expected default attribute template, got: %s", cfg.AttributeTemplate)
 	}
 
@@ -45,7 +45,8 @@ func TestRenderAttribute_DefaultTemplate(t *testing.T) {
 			name: "required attribute",
 			ctx: TemplateContext{
 				Attribute:   "bypass",
-				Required:    true,
+				Required:    "Required",
+				IsRequired:  true,
 				Description: "Specifies whether traffic is bypassed for Logging/Metrics/AzureServices. Valid options are any combination of `Logging`, `Metrics`, `AzureServices`, or `None`.",
 			},
 			expected: "`bypass` - (Required) Specifies whether traffic is bypassed for Logging/Metrics/AzureServices. Valid options are any combination of `Logging`, `Metrics`, `AzureServices`, or `None`.",
@@ -54,7 +55,8 @@ func TestRenderAttribute_DefaultTemplate(t *testing.T) {
 			name: "optional attribute",
 			ctx: TemplateContext{
 				Attribute:   "bypass",
-				Required:    false,
+				Required:    "Optional",
+				IsRequired:  false,
 				Description: "Specifies whether traffic is bypassed for Logging/Metrics/AzureServices. Valid options are any combination of `Logging`, `Metrics`, `AzureServices`, or `None`.",
 			},
 			expected: "`bypass` - (Optional) Specifies whether traffic is bypassed for Logging/Metrics/AzureServices. Valid options are any combination of `Logging`, `Metrics`, `AzureServices`, or `None`.",
@@ -63,9 +65,11 @@ func TestRenderAttribute_DefaultTemplate(t *testing.T) {
 			name: "attribute with type",
 			ctx: TemplateContext{
 				Attribute:   "port",
-				Required:    false,
+				Required:    "Optional",
+				IsRequired:  false,
 				Description: "The port number",
 				Type:        "number",
+				HasType:     true,
 			},
 			expected: "`port` - (Optional) The port number",
 		},
@@ -93,9 +97,11 @@ func TestRenderAttribute_CustomTemplate(t *testing.T) {
 
 	ctx := TemplateContext{
 		Attribute:   "database_url",
-		Required:    true,
+		Required:    "Yes",
+		IsRequired:  true,
 		Description: "The database connection string",
 		Type:        "string",
+		HasType:     true,
 	}
 
 	result := cfg.RenderAttribute(ctx)
@@ -242,7 +248,7 @@ func TestValidate(t *testing.T) {
 				IndentStyle:       "bullets",
 			},
 			wantError: true,
-			errorMsg:  "attribute_template must contain {attribute} placeholder",
+			errorMsg:  "attribute_template must contain {attribute} or {{.Attribute}} placeholder",
 		},
 		{
 			name: "invalid escape mode",
@@ -290,6 +296,89 @@ func TestValidate(t *testing.T) {
 				if err != nil {
 					t.Errorf("Expected no error, got: %s", err.Error())
 				}
+			}
+		})
+	}
+}
+
+func TestRenderAttribute_WithConditionals(t *testing.T) {
+	tests := []struct {
+		name     string
+		template string
+		ctx      TemplateContext
+		expected string
+	}{
+		{
+			name:     "with default value",
+			template: "{{.Attribute}} - ({{.Required}}) {{.Description}}{{if .HasDefault}} - Default: {{.Default}}{{end}}",
+			ctx: TemplateContext{
+				Attribute:   "port",
+				Required:    "Optional",
+				IsRequired:  false,
+				Description: "Database port",
+				Default:     "5432",
+				HasDefault:  true,
+			},
+			expected: "`port` - (Optional) Database port - Default: 5432",
+		},
+		{
+			name:     "without default value",
+			template: "{{.Attribute}} - ({{.Required}}) {{.Description}}{{if .HasDefault}} - Default: {{.Default}}{{end}}",
+			ctx: TemplateContext{
+				Attribute:   "host",
+				Required:    "Required",
+				IsRequired:  true,
+				Description: "Database host",
+				HasDefault:  false,
+			},
+			expected: "`host` - (Required) Database host",
+		},
+		{
+			name:     "with example using conditional",
+			template: "{{.Attribute}} - {{.Description}}{{if .HasExample}} (e.g., {{.Example}}){{end}}",
+			ctx: TemplateContext{
+				Attribute:  "region",
+				Required:   "Required",
+				IsRequired: true,
+				Description: "AWS region",
+				Example:    "us-east-1",
+				HasExample: true,
+			},
+			expected: "`region` - AWS region (e.g., us-east-1)",
+		},
+		{
+			name:     "legacy syntax with default",
+			template: "{attribute} - ({required}) {description} - Default is: {default}",
+			ctx: TemplateContext{
+				Attribute:   "timeout",
+				Required:    "Optional",
+				IsRequired:  false,
+				Description: "Request timeout",
+				Default:     "30s",
+				HasDefault:  true,
+			},
+			expected: "`timeout` - (Optional) Request timeout - Default is: 30s",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &TemplateConfig{
+				AttributeTemplate: tt.template,
+				RequiredText:      "Required",
+				OptionalText:      "Optional",
+				EscapeMode:        "inline_code",
+				IndentStyle:       "bullets",
+				IndentSize:        2,
+			}
+			// Compile the template
+			if err := cfg.compileTemplate(); err != nil {
+				t.Fatalf("Failed to compile template: %v", err)
+			}
+
+			result := cfg.RenderAttribute(tt.ctx)
+			if result != tt.expected {
+				t.Errorf("Expected:\n%s\nGot:\n%s", tt.expected, result)
 			}
 		})
 	}

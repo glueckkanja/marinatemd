@@ -456,3 +456,266 @@ func TestRenderSchema_ShowDescriptionWithDefaults(t *testing.T) {
 	}
 }
 
+func TestRenderSchema_WithDefaultAndExample(t *testing.T) {
+	// Test that default and example values are rendered correctly
+	s := &schema.Schema{
+		Variable: "test_var",
+		Version:  "1",
+		SchemaNodes: map[string]*schema.Node{
+			"database": {
+				Marinate: &schema.MarinateInfo{
+					Description: "Database configuration",
+					Required:    false,
+				},
+				Attributes: map[string]*schema.Node{
+					"port": {
+						Marinate: &schema.MarinateInfo{
+							Description: "Database port",
+							Required:    false,
+							Type:        "number",
+							Default:     5432,
+							Example:     3306,
+						},
+						Attributes: map[string]*schema.Node{},
+					},
+					"host": {
+						Marinate: &schema.MarinateInfo{
+							Description: "Database hostname",
+							Required:    true,
+							Type:        "string",
+							Default:     "localhost",
+							Example:     "db.example.com",
+						},
+						Attributes: map[string]*schema.Node{},
+					},
+				},
+			},
+		},
+	}
+
+	// Create a custom template that uses {default} and {example}
+	templateCfg := &TemplateConfig{
+		AttributeTemplate: "{attribute} - ({required}) {description} [Default: {default}] [Example: {example}]",
+		RequiredText:      "Required",
+		OptionalText:      "Optional",
+		EscapeMode:        "inline_code",
+		IndentStyle:       "bullets",
+		IndentSize:        DefaultIndentSize,
+	}
+
+	r := NewRendererWithTemplate(templateCfg)
+	result, err := r.RenderSchema(s)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	// Check that default and example values appear in output
+	if !strings.Contains(result, "[Default: 5432]") {
+		t.Error("Expected default value 5432 for port")
+	}
+	if !strings.Contains(result, "[Example: 3306]") {
+		t.Error("Expected example value 3306 for port")
+	}
+	if !strings.Contains(result, "[Default: localhost]") {
+		t.Error("Expected default value 'localhost' for host")
+	}
+	if !strings.Contains(result, "[Example: db.example.com]") {
+		t.Error("Expected example value 'db.example.com' for host")
+	}
+}
+
+func TestRenderSchema_WithEmptyStringDefault(t *testing.T) {
+	// Test that empty string default values are rendered correctly
+	s := &schema.Schema{
+		Variable: "test_var",
+		Version:  "1",
+		SchemaNodes: map[string]*schema.Node{
+			"config": {
+				Marinate: &schema.MarinateInfo{
+					Description: "Configuration object",
+					Required:    false,
+				},
+				Attributes: map[string]*schema.Node{
+					"prefix": {
+						Marinate: &schema.MarinateInfo{
+							Description: "Resource name prefix",
+							Required:    false,
+							Type:        "string",
+							Default:     "", // Empty string is a valid default
+						},
+						Attributes: map[string]*schema.Node{},
+					},
+					"suffix": {
+						Marinate: &schema.MarinateInfo{
+							Description: "Resource name suffix",
+							Required:    false,
+							Type:        "string",
+							Default:     "prod", // Non-empty default for comparison
+						},
+						Attributes: map[string]*schema.Node{},
+					},
+					"no_default": {
+						Marinate: &schema.MarinateInfo{
+							Description: "Field without default",
+							Required:    true,
+							Type:        "string",
+							Default:     nil, // No default value
+						},
+						Attributes: map[string]*schema.Node{},
+					},
+				},
+			},
+		},
+	}
+
+	// Create a custom template that uses {default} conditionally
+	templateCfg := &TemplateConfig{
+		AttributeTemplate: "{{.Attribute}} - ({{.Required}}) {{.Description}}{{if .HasDefault}} [Default: {{.Default}}]{{end}}",
+		RequiredText:      "Required",
+		OptionalText:      "Optional",
+		EscapeMode:        "inline_code",
+		IndentStyle:       "bullets",
+		IndentSize:        DefaultIndentSize,
+	}
+
+	r := NewRendererWithTemplate(templateCfg)
+	result, err := r.RenderSchema(s)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	// Check that empty string default is shown as ""
+	if !strings.Contains(result, `[Default: ""]`) {
+		t.Errorf("Expected empty string default shown as \"\" for prefix. Got:\n%s", result)
+	}
+
+	// Check that non-empty default is shown
+	if !strings.Contains(result, `[Default: prod]`) {
+		t.Errorf("Expected default value 'prod' for suffix. Got:\n%s", result)
+	}
+
+	// Check that field without default has no [Default: ...] text
+	lines := strings.Split(result, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "`no_default`") {
+			if strings.Contains(line, "[Default:") {
+				t.Errorf("Expected no default for no_default field. Got line: %s", line)
+			}
+			break
+		}
+	}
+}
+
+func TestRenderSchema_WithEmptyMapDefault(t *testing.T) {
+	// Test that empty map/object defaults (map[]) are rendered as {}
+	s := &schema.Schema{
+		Variable: "test_var",
+		Version:  "1",
+		SchemaNodes: map[string]*schema.Node{
+			"config": {
+				Marinate: &schema.MarinateInfo{
+					Description: "Configuration settings",
+					Required:    false,
+				},
+				Attributes: map[string]*schema.Node{
+					"tags": {
+						Marinate: &schema.MarinateInfo{
+							Description: "Resource tags",
+							Required:    false,
+							Type:        "map(string)",
+							Default:     map[string]interface{}{}, // Empty map
+						},
+						Attributes: map[string]*schema.Node{},
+					},
+					"metadata": {
+						Marinate: &schema.MarinateInfo{
+							Description: "Additional metadata",
+							Required:    false,
+							Type:        "object",
+							Example:     map[string]interface{}{}, // Empty object as example
+						},
+						Attributes: map[string]*schema.Node{},
+					},
+				},
+			},
+		},
+	}
+
+	templateCfg := &TemplateConfig{
+		AttributeTemplate: "{{.Attribute}} - {{.Description}}{{if .HasDefault}} [Default: {{.Default}}]{{end}}{{if .HasExample}} [Example: {{.Example}}]{{end}}",
+		RequiredText:      "Required",
+		OptionalText:      "Optional",
+		EscapeMode:        "inline_code",
+		IndentStyle:       "bullets",
+		IndentSize:        DefaultIndentSize,
+	}
+
+	r := NewRendererWithTemplate(templateCfg)
+	result, err := r.RenderSchema(s)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	// Check that empty map default is shown as {}
+	if !strings.Contains(result, "[Default: {}]") {
+		t.Errorf("Expected empty map default shown as {} for tags. Got:\n%s", result)
+	}
+
+	// Check that empty object example is shown as {}
+	if !strings.Contains(result, "[Example: {}]") {
+		t.Errorf("Expected empty object example shown as {} for metadata. Got:\n%s", result)
+	}
+
+	// Ensure it's not showing map[]
+	if strings.Contains(result, "map[]") {
+		t.Errorf("Expected {} but found map[] in output:\n%s", result)
+	}
+}
+
+func TestRenderSchema_TrimsTrailingWhitespace(t *testing.T) {
+	// Test that trailing whitespace is trimmed from rendered lines
+	s := &schema.Schema{
+		Variable: "test_var",
+		Version:  "1",
+		SchemaNodes: map[string]*schema.Node{
+			"field1": {
+				Marinate: &schema.MarinateInfo{
+					Description: "First field",
+					Required:    true,
+				},
+				Attributes: map[string]*schema.Node{},
+			},
+			"field2": {
+				Marinate: &schema.MarinateInfo{
+					Description: "Second field",
+					Required:    false,
+				},
+				Attributes: map[string]*schema.Node{},
+			},
+		},
+	}
+
+	// Template that might produce trailing spaces
+	templateCfg := &TemplateConfig{
+		AttributeTemplate: "{{.Attribute}} - ({{.Required}}) {{.Description}} ",
+		RequiredText:      "Required",
+		OptionalText:      "Optional",
+		EscapeMode:        "inline_code",
+		IndentStyle:       "bullets",
+		IndentSize:        DefaultIndentSize,
+	}
+
+	r := NewRendererWithTemplate(templateCfg)
+	result, err := r.RenderSchema(s)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	// Split into lines and check that none have trailing whitespace
+	lines := strings.Split(result, "\n")
+	for i, line := range lines {
+		if line != "" && line != strings.TrimRight(line, " \t") {
+			t.Errorf("Line %d has trailing whitespace: %q", i, line)
+		}
+	}
+}
