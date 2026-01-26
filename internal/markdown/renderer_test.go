@@ -719,3 +719,91 @@ func TestRenderSchema_TrimsTrailingWhitespace(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderSchema_ConditionalShowDescription(t *testing.T) {
+	// Test that ShowDescription boolean can be used in templates to avoid double spaces
+	showDescFalse := false
+	showDescTrue := true
+
+	s := &schema.Schema{
+		Variable: "test_var",
+		Version:  "1",
+		SchemaNodes: map[string]*schema.Node{
+			"config": {
+				Marinate: &schema.MarinateInfo{
+					Description: "Configuration object",
+					Required:    false,
+				},
+				Attributes: map[string]*schema.Node{
+					"field_with_desc": {
+						Marinate: &schema.MarinateInfo{
+							Description:     "This has a description",
+							ShowDescription: &showDescTrue,
+							Required:        false,
+						},
+					},
+					"field_hidden_desc": {
+						Marinate: &schema.MarinateInfo{
+							Description:     "This description is hidden",
+							ShowDescription: &showDescFalse,
+							Required:        true,
+						},
+					},
+					"field_default_desc": {
+						Marinate: &schema.MarinateInfo{
+							Description: "Default show description (nil = true)",
+							Required:    false,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Template that uses ShowDescription to conditionally render description
+	templateCfg := &TemplateConfig{
+		AttributeTemplate: "{{.Attribute}} - ({{.Required}}){{if .ShowDescription}} {{.Description}}{{end}}",
+		RequiredText:      "Required",
+		OptionalText:      "Optional",
+		EscapeMode:        "inline_code",
+		IndentStyle:       "bullets",
+		IndentSize:        DefaultIndentSize,
+	}
+
+	r := NewRendererWithTemplate(templateCfg)
+	result, err := r.RenderSchema(s)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	// Field with description shown should have the description
+	if !strings.Contains(result, "This has a description") {
+		t.Errorf("Expected description to be shown for field_with_desc. Got:\n%s", result)
+	}
+
+	// Field with hidden description should NOT have the description
+	if strings.Contains(result, "This description is hidden") {
+		t.Errorf("Expected description to be hidden for field_hidden_desc. Got:\n%s", result)
+	}
+
+	// Field with default (nil) should show description
+	if !strings.Contains(result, "Default show description") {
+		t.Errorf("Expected default description to be shown for field_default_desc. Got:\n%s", result)
+	}
+
+	// Verify no double spaces after (Required) when description is hidden
+	if strings.Contains(result, "(Required)  ") {
+		t.Errorf("Found double space after (Required), should be single space. Got:\n%s", result)
+	}
+
+	// Verify single space after (Required) when description is shown
+	//nolint:modernize // strings.Split is clearer than SplitSeq for this simple test case
+	lines := strings.Split(result, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "field_with_desc") {
+			if !strings.Contains(line, "(Optional) This has a description") {
+				t.Errorf("Expected single space between (Optional) and description. Got: %s", line)
+			}
+		}
+	}
+}

@@ -152,16 +152,17 @@ func (r *Renderer) renderNodeContent(name string, node *schema.Node, depth int, 
 	}
 
 	ctx := TemplateContext{
-		Attribute:   name,
-		Required:    requiredText,
-		IsRequired:  isRequired,
-		Description: description,
-		Type:        node.Marinate.Type,
-		Default:     defaultStr,
-		Example:     exampleStr,
-		HasDefault:  hasDefault,
-		HasExample:  hasExample,
-		HasType:     node.Marinate.Type != "",
+		Attribute:       name,
+		Required:        requiredText,
+		IsRequired:      isRequired,
+		Description:     description,
+		ShowDescription: showDescription,
+		Type:            node.Marinate.Type,
+		Default:         defaultStr,
+		Example:         exampleStr,
+		HasDefault:      hasDefault,
+		HasExample:      hasExample,
+		HasType:         node.Marinate.Type != "",
 	}
 
 	indent := r.templateCfg.FormatIndent(depth)

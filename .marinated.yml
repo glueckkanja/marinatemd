@@ -41,25 +41,28 @@ markdown_template:
   #
   # Go template syntax (recommended for conditional logic):
   #   Available fields:
-  #     {{.Attribute}}   - The attribute name (pre-escaped based on escape_mode)
-  #     {{.Required}}    - Required/Optional text string
-  #     {{.IsRequired}}  - Boolean flag for required status
-  #     {{.Description}} - The attribute description
-  #     {{.Type}}        - The attribute type
-  #     {{.Default}}     - Default value string
-  #     {{.Example}}     - Example value string
-  #     {{.HasDefault}}  - Boolean: true if default value exists
-  #     {{.HasExample}}  - Boolean: true if example value exists
-  #     {{.HasType}}     - Boolean: true if type is specified
+  #     {{.Attribute}}        - The attribute name (pre-escaped based on escape_mode)
+  #     {{.Required}}         - Required/Optional text string
+  #     {{.IsRequired}}       - Boolean flag for required status
+  #     {{.Description}}      - The attribute description
+  #     {{.ShowDescription}}  - Boolean: whether description should be shown (based on show_description field)
+  #     {{.Type}}             - The attribute type
+  #     {{.Default}}          - Default value string
+  #     {{.Example}}          - Example value string
+  #     {{.HasDefault}}       - Boolean: true if default value exists
+  #     {{.HasExample}}       - Boolean: true if example value exists
+  #     {{.HasType}}          - Boolean: true if type is specified
   #
   #   Conditional syntax:
   #     {{if .HasDefault}} - Default: {{.Default}}{{end}}
   #     {{if .IsRequired}}(Required){{else}}(Optional){{end}}
+  #     {{if .ShowDescription}}{{.Description}}{{end}}
   #
   # Example templates:
   #   Simple: "{attribute} - ({required}) {description}"
   #   With default: "{{.Attribute}} - ({{.Required}}) {{.Description}}{{if .HasDefault}} - Default: {{.Default}}{{end}}"
   #   Full featured: "{{.Attribute}} - {{.Description}}{{if .HasDefault}} [Default: {{.Default}}]{{end}}{{if .HasExample}} (e.g., {{.Example}}){{end}}"
+  #   Conditional description: "{{.Attribute}} - ({{.Required}}){{if .ShowDescription}} {{.Description}}{{end}}{{if .HasDefault}} - Default: {{.Default}}{{end}}"
   #
   # Default: "{{.Attribute}} - ({{.Required}}) {{.Description}}"
   attribute_template: "{{.Attribute}} - ({{.Required}}) {{.Description}}{{if .HasDefault}} - Default: {{.Default}}{{end}}"

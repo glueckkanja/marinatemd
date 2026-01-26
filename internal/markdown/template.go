@@ -78,16 +78,17 @@ func DefaultTemplateConfig() *TemplateConfig {
 
 // TemplateContext holds the data for rendering a single attribute.
 type TemplateContext struct {
-	Attribute   string
-	Required    string // String representation ("Required" or "Optional")
-	IsRequired  bool   // Boolean flag for conditional checks
-	Description string
-	Type        string
-	Default     string
-	Example     string
-	HasDefault  bool // Helper for conditionals
-	HasExample  bool // Helper for conditionals
-	HasType     bool // Helper for conditionals
+	Attribute       string
+	Required        string // String representation ("Required" or "Optional")
+	IsRequired      bool   // Boolean flag for conditional checks
+	Description     string
+	ShowDescription bool // Whether description should be shown (based on show_description field)
+	Type            string
+	Default         string
+	Example         string
+	HasDefault      bool // Helper for conditionals
+	HasExample      bool // Helper for conditionals
+	HasType         bool // Helper for conditionals
 }
 
 // compileTemplate compiles the attribute template into a Go template.
