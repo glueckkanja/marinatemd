@@ -449,7 +449,6 @@ func TestShowDescription_DefaultBehavior(t *testing.T) {
 			Type:            "string",
 			Required:        true,
 		},
-		Attributes: map[string]*schema.Node{},
 	}
 
 	if node.Marinate.ShowDescription != nil {
@@ -472,7 +471,6 @@ func TestShowDescription_ExplicitlyHidden(t *testing.T) {
 			Type:            "string",
 			Required:        true,
 		},
-		Attributes: map[string]*schema.Node{},
 	}
 
 	if node.Marinate.ShowDescription == nil {
@@ -497,7 +495,6 @@ func TestShowDescription_ExplicitlyShown(t *testing.T) {
 			Type:            "string",
 			Required:        false,
 		},
-		Attributes: map[string]*schema.Node{},
 	}
 
 	if node.Marinate.ShowDescription == nil {

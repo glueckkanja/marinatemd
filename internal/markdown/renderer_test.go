@@ -595,8 +595,8 @@ func TestRenderSchema_WithEmptyStringDefault(t *testing.T) {
 	}
 
 	// Check that field without default has no [Default: ...] text
-	lines := strings.Split(result, "\n")
-	for _, line := range lines {
+	//nolint:modernize // strings.Split is clearer than SplitSeq for this simple test case
+	for _, line := range strings.Split(result, "\n") {
 		if strings.Contains(line, "`no_default`") {
 			if strings.Contains(line, "[Default:") {
 				t.Errorf("Expected no default for no_default field. Got line: %s", line)
@@ -623,7 +623,7 @@ func TestRenderSchema_WithEmptyMapDefault(t *testing.T) {
 							Description: "Resource tags",
 							Required:    false,
 							Type:        "map(string)",
-							Default:     map[string]interface{}{}, // Empty map
+							Default:     map[string]any{}, // Empty map
 						},
 						Attributes: map[string]*schema.Node{},
 					},
@@ -632,7 +632,7 @@ func TestRenderSchema_WithEmptyMapDefault(t *testing.T) {
 							Description: "Additional metadata",
 							Required:    false,
 							Type:        "object",
-							Example:     map[string]interface{}{}, // Empty object as example
+							Example:     map[string]any{}, // Empty object as example
 						},
 						Attributes: map[string]*schema.Node{},
 					},
