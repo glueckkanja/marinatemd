@@ -3,7 +3,7 @@ version: "1"
 schema:
     advanced:
         _marinate:
-            description: '# TODO: Add description for advanced'
+            description: Advanced configuration settings
         type: any
         default: {}
     location:

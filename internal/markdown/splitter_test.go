@@ -31,7 +31,6 @@ Some content here
 
 Type: object
 
-Default: n/a
 `,
 			expectedCount: 1,
 			expectedVars:  []string{"app_config"},
@@ -50,7 +49,6 @@ App config content
 <!-- /MARINATED: app_config -->
 
 Type: object
-Default: n/a
 
 ### database\_config
 
@@ -59,7 +57,6 @@ Database config content
 <!-- /MARINATED: database_config -->
 
 Type: object
-Default: n/a
 
 ### cache\_settings
 
@@ -68,7 +65,6 @@ Cache settings content
 <!-- /MARINATED: cache_settings -->
 
 Type: string
-Default: "default"
 `,
 			expectedCount: 3,
 			expectedVars:  []string{"app_config", "database_config", "cache_settings"},
@@ -222,7 +218,6 @@ Description: <!-- MARINATED: app_config -->
 <!-- /MARINATED: app_config -->
 
 Type: object({})
-Default: n/a
 
 ### database\_settings
 
@@ -231,7 +226,6 @@ Description: <!-- MARINATED: database_settings -->
 <!-- /MARINATED: database_settings -->
 
 Type: object({})
-Default: null
 `
 
 	if err := os.WriteFile(testFile, []byte(content), 0600); err != nil {
@@ -383,7 +377,6 @@ Description: <!-- MARINATED: app_config -->
 <!-- /MARINATED: app_config -->
 
 Type: object({})
-Default: n/a
 
 ### storage\_config
 
@@ -393,7 +386,6 @@ Description: <!-- MARINATED: storage_config -->
 <!-- /MARINATED: storage_config -->
 
 Type: object({})
-Default: null
 `
 
 	if err := os.WriteFile(inputFile, []byte(content), 0600); err != nil {
@@ -528,13 +520,13 @@ object({
 
 Default: n/a
 
+
 ### access\_tier
 
 Description: (Optional) Defines the access tier for BlobStorage.
 
 Type: string
 
-Default: "Hot"
 `
 
 	splitter := markdown.NewSplitter()

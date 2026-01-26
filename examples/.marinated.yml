@@ -8,11 +8,4 @@ markdown_template:
   escape_mode: "inline_code"
   indent_style: "bullets"
   indent_size: 2
-  object_separators:
-    - level: 0
-      style: "line"
-
-split:
-  output_dir: "split_simple"
-  header_file: "_header.md"
-  footer_file: "_footer.md"
+  separator_indents: [] # No separators

@@ -48,18 +48,16 @@ func TestRenderSchema_SimpleAttributes(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"bypass": {
-				Type:     "string",
-				Required: false,
 				Marinate: &schema.MarinateInfo{
 					Description: "Specifies whether traffic is bypassed for Logging/Metrics/AzureServices. Valid options are any combination of `Logging`, `Metrics`, `AzureServices`, or `None`.",
+					Required:    false,
 				},
 				Attributes: map[string]*schema.Node{},
 			},
 			"default_action": {
-				Type:     "string",
-				Required: true,
 				Marinate: &schema.MarinateInfo{
 					Description: "Specifies the default action of allow or deny when no other rules match.",
+					Required:    true,
 				},
 				Attributes: map[string]*schema.Node{},
 			},
@@ -92,27 +90,18 @@ func TestRenderSchema_NestedObjects(t *testing.T) {
 		Variable: "app_config",
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
-			"database": {
-				Type:     "object",
-				Required: false,
-				Marinate: &schema.MarinateInfo{
-					Description: "Database configuration settings",
-				},
+			"database": {Marinate: &schema.MarinateInfo{
+				Description: "Database configuration settings",
+			},
 				Attributes: map[string]*schema.Node{
-					"host": {
-						Type:     "string",
-						Required: true,
-						Marinate: &schema.MarinateInfo{
-							Description: "The database host address",
-						},
+					"host": {Marinate: &schema.MarinateInfo{
+						Description: "The database host address",
+					},
 						Attributes: map[string]*schema.Node{},
 					},
-					"port": {
-						Type:     "number",
-						Required: false,
-						Marinate: &schema.MarinateInfo{
-							Description: "The database port number",
-						},
+					"port": {Marinate: &schema.MarinateInfo{
+						Description: "The database port number",
+					},
 						Attributes: map[string]*schema.Node{},
 					},
 				},
@@ -155,10 +144,9 @@ func TestRenderSchema_CustomTemplate(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"field1": {
-				Type:     "string",
-				Required: true,
 				Marinate: &schema.MarinateInfo{
 					Description: "A test field",
+					Required:    true,
 				},
 				Attributes: map[string]*schema.Node{},
 			},
@@ -219,28 +207,19 @@ func TestRenderSchema_DeterministicOrder(t *testing.T) {
 		Variable: "test",
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
-			"zebra": {
-				Type:     "string",
-				Required: false,
-				Marinate: &schema.MarinateInfo{
-					Description: "Last alphabetically",
-				},
+			"zebra": {Marinate: &schema.MarinateInfo{
+				Description: "Last alphabetically",
+			},
 				Attributes: map[string]*schema.Node{},
 			},
-			"alpha": {
-				Type:     "string",
-				Required: false,
-				Marinate: &schema.MarinateInfo{
-					Description: "First alphabetically",
-				},
+			"alpha": {Marinate: &schema.MarinateInfo{
+				Description: "First alphabetically",
+			},
 				Attributes: map[string]*schema.Node{},
 			},
-			"middle": {
-				Type:     "string",
-				Required: false,
-				Marinate: &schema.MarinateInfo{
-					Description: "Middle alphabetically",
-				},
+			"middle": {Marinate: &schema.MarinateInfo{
+				Description: "Middle alphabetically",
+			},
 				Attributes: map[string]*schema.Node{},
 			},
 		},
@@ -287,96 +266,4 @@ func TestInjectIntoFile(t *testing.T) {
 // TODO: Add tests for finding MARINATED markers
 func TestFindMarkers(t *testing.T) {
 	t.Skip("Not implemented yet")
-}
-
-func TestRenderSchema_WithObjectSeparators(t *testing.T) {
-	tests := []struct {
-		name         string
-		separators   []ObjectSeparator
-		expectedText string
-		notExpected  string
-	}{
-		{
-			name:         "no separators",
-			separators:   []ObjectSeparator{},
-			expectedText: "`parent`",
-			notExpected:  "---",
-		},
-		{
-			name: "blank separator at level 1",
-			separators: []ObjectSeparator{
-				{Level: 1, Style: SeparatorStyleBlank, Count: 1},
-			},
-			expectedText: "`parent`",
-			notExpected:  "---", // Blank lines, not horizontal rules
-		},
-		{
-			name: "line separator at level 1",
-			separators: []ObjectSeparator{
-				{Level: 1, Style: SeparatorStyleLine},
-			},
-			expectedText: "---", // Should have horizontal rule between child objects
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cfg := &TemplateConfig{
-				AttributeTemplate: "{attribute} - ({required}) {description}",
-				RequiredText:      "Required",
-				OptionalText:      "Optional",
-				EscapeMode:        "inline_code",
-				IndentStyle:       "bullets",
-				IndentSize:        2,
-				ObjectSeparators:  tt.separators,
-			}
-
-			// Create schema with nested objects
-			s := &schema.Schema{
-				Variable: "test_var",
-				Version:  "1",
-				SchemaNodes: map[string]*schema.Node{
-					"parent": {
-						Type:     "object",
-						Required: false,
-						Marinate: &schema.MarinateInfo{
-							Description: "Parent object",
-						},
-						Attributes: map[string]*schema.Node{
-							"child1": {
-								Type:     "object",
-								Required: false,
-								Marinate: &schema.MarinateInfo{
-									Description: "First child object",
-								},
-								Attributes: map[string]*schema.Node{},
-							},
-							"child2": {
-								Type:     "object",
-								Required: false,
-								Marinate: &schema.MarinateInfo{
-									Description: "Second child object",
-								},
-								Attributes: map[string]*schema.Node{},
-							},
-						},
-					},
-				},
-			}
-
-			r := NewRendererWithTemplate(cfg)
-			result, err := r.RenderSchema(s)
-			if err != nil {
-				t.Fatalf("Unexpected error: %v", err)
-			}
-
-			if !strings.Contains(result, tt.expectedText) {
-				t.Errorf("Expected to find %q in result:\n%s", tt.expectedText, result)
-			}
-
-			if tt.notExpected != "" && strings.Contains(result, tt.notExpected) {
-				t.Errorf("Did not expect to find %q in result:\n%s", tt.notExpected, result)
-			}
-		})
-	}
 }

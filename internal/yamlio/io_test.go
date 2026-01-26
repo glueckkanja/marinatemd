@@ -17,23 +17,17 @@ func TestWriter_WriteSchema(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"database": {
-				Type:     "object",
-				Required: false,
 				Marinate: &schema.MarinateInfo{
 					Description: "Database configuration",
 				},
 				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:     "string",
-						Required: true,
 						Marinate: &schema.MarinateInfo{
 							Description: "Database host",
 						},
 						Attributes: map[string]*schema.Node{},
 					},
 					"port": {
-						Type:     "number",
-						Required: false,
 						Marinate: &schema.MarinateInfo{
 							Description: "Database port",
 						},
@@ -92,20 +86,20 @@ func TestReader_ReadSchema_ExistingFile(t *testing.T) {
 version: "1"
 schema:
   database:
-    type: object
-    required: false
     _marinate:
       description: "Database configuration"
+      type: object
+      required: false
     host:
-      type: string
-      required: true
       _marinate:
         description: "Database host"
+        type: string
+        required: true
     port:
-      type: number
-      required: false
       _marinate:
         description: "Database port"
+        type: number
+        required: false
 `
 
 	// Create directory
@@ -142,10 +136,10 @@ schema:
 	if !ok {
 		t.Fatal("expected database node")
 	}
-	if db.Type != "object" {
-		t.Errorf("database type = %v, want object", db.Type)
+	if db.Marinate.Type != "object" {
+		t.Errorf("database type = %v, want object", db.Marinate.Type)
 	}
-	if db.Required {
+	if db.Marinate.Required {
 		t.Error("expected database to be optional")
 	}
 }
@@ -158,26 +152,26 @@ func TestWriter_WriteSchema_ComplexNested(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"private_link_access": {
-				Type:        "list",
-				Required:    false,
-				ElementType: "object",
 				Marinate: &schema.MarinateInfo{
 					Description: "Private link access rules",
+					Type:        "list",
+					ElementType: "object",
+					Required:    false,
 				},
 				Attributes: map[string]*schema.Node{
 					"endpoint_resource_id": {
-						Type:     "string",
-						Required: true,
 						Marinate: &schema.MarinateInfo{
 							Description: "Resource ID",
+							Type:        "string",
+							Required:    true,
 						},
 						Attributes: map[string]*schema.Node{},
 					},
 					"endpoint_tenant_id": {
-						Type:     "string",
-						Required: false,
 						Marinate: &schema.MarinateInfo{
 							Description: "Tenant ID",
+							Type:        "string",
+							Required:    false,
 						},
 						Attributes: map[string]*schema.Node{},
 					},
@@ -200,11 +194,11 @@ func TestWriter_WriteSchema_ComplexNested(t *testing.T) {
 
 	// Verify structure
 	pla := readSchema.SchemaNodes["private_link_access"]
-	if pla.Type != "list" {
-		t.Errorf("type = %v, want list", pla.Type)
+	if pla.Marinate.Type != "list" {
+		t.Errorf("type = %v, want list", pla.Marinate.Type)
 	}
-	if pla.ElementType != "object" {
-		t.Errorf("element_type = %v, want object", pla.ElementType)
+	if pla.Marinate.ElementType != "object" {
+		t.Errorf("element_type = %v, want object", pla.Marinate.ElementType)
 	}
 
 	// Check attributes
@@ -212,7 +206,7 @@ func TestWriter_WriteSchema_ComplexNested(t *testing.T) {
 	if !ok {
 		t.Fatal("expected endpoint_resource_id attribute")
 	}
-	if !eri.Required {
+	if !eri.Marinate.Required {
 		t.Error("expected endpoint_resource_id to be required")
 	}
 }
@@ -262,15 +256,11 @@ func TestWriter_PreserveExistingDescriptions(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"database": {
-				Type:     "object",
-				Required: false,
 				Marinate: &schema.MarinateInfo{
 					Description: "User-written database description",
 				},
 				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:     "string",
-						Required: true,
 						Marinate: &schema.MarinateInfo{
 							Description: "User-written host description",
 						},
@@ -316,26 +306,23 @@ func TestWriter_FieldNamedDescription(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"ssh_authorized_key": {
-				Type:        "list",
-				ElementType: "object",
-				Required:    false,
 				Marinate: &schema.MarinateInfo{
 					Description: "SSH authorized keys configuration",
 				},
 				Attributes: map[string]*schema.Node{
 					"description": {
-						Type:     "string",
-						Required: false,
 						Marinate: &schema.MarinateInfo{
 							Description: "Description of the SSH key",
+							Type:        "string",
+							Required:    false,
 						},
 						Attributes: map[string]*schema.Node{},
 					},
 					"key": {
-						Type:     "string",
-						Required: true,
 						Marinate: &schema.MarinateInfo{
 							Description: "The SSH public key",
+							Type:        "string",
+							Required:    true,
 						},
 						Attributes: map[string]*schema.Node{},
 					},
@@ -376,8 +363,8 @@ func TestWriter_FieldNamedDescription(t *testing.T) {
 	if !ok {
 		t.Fatal("expected 'description' attribute")
 	}
-	if desc.Type != "string" {
-		t.Errorf("expected type 'string', got %v", desc.Type)
+	if desc.Marinate.Type != "string" {
+		t.Errorf("expected type 'string', got %v", desc.Marinate.Type)
 	}
 	if desc.Marinate == nil || desc.Marinate.Description != "Description of the SSH key" {
 		t.Errorf("expected description preserved, got %v", desc.Marinate)
@@ -388,7 +375,7 @@ func TestWriter_FieldNamedDescription(t *testing.T) {
 	if !ok {
 		t.Fatal("expected 'key' attribute")
 	}
-	if !key.Required {
+	if !key.Marinate.Required {
 		t.Error("expected key to be required")
 	}
 }

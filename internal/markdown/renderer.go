@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 
@@ -52,19 +53,13 @@ func (r *Renderer) RenderSchema(s *schema.Schema) (string, error) {
 	}
 	sort.Strings(nodeNames)
 
-	// Get separator for level 0 (root attributes)
-	separator := r.templateCfg.GetSeparatorForLevel(0)
-
 	for i, nodeName := range nodeNames {
 		node := s.SchemaNodes[nodeName]
 
-		// Insert separator before root-level object nodes (except the first one)
-		if separator != nil && i > 0 && node.Type == "object" {
+		// Insert separator before top-level object nodes if configured for depth 0
+		if r.shouldInsertSeparator(i, node, 0) {
 			indent := r.templateCfg.FormatIndent(0)
-			separatorText := r.templateCfg.RenderSeparator(separator, indent)
-			if separatorText != "" {
-				builder.WriteString(separatorText)
-			}
+			r.insertSeparator(indent, &builder)
 		}
 
 		if err := r.renderNode(nodeName, node, 0, &builder); err != nil {
@@ -98,9 +93,9 @@ func (r *Renderer) renderNodeContent(name string, node *schema.Node, depth int, 
 
 	ctx := TemplateContext{
 		Attribute:   name,
-		Required:    node.Required,
+		Required:    node.Marinate.Required,
 		Description: node.Marinate.Description,
-		Type:        node.Type,
+		Type:        node.Marinate.Type,
 	}
 
 	indent := r.templateCfg.FormatIndent(depth)
@@ -114,12 +109,15 @@ func (r *Renderer) renderNodeContent(name string, node *schema.Node, depth int, 
 func (r *Renderer) renderNodeChildren(node *schema.Node, depth int, builder *strings.Builder) error {
 	attrNames := r.getSortedAttributeNames(node)
 	childDepth := depth + 1
-	separator := r.getSeparatorForNode(node, childDepth)
 
 	for i, attrName := range attrNames {
 		attr := node.Attributes[attrName]
 
-		r.insertSeparatorIfNeeded(separator, i, attr, childDepth, builder)
+		// Insert separator before object nodes if configured for this depth
+		if r.shouldInsertSeparator(i, attr, childDepth) {
+			indent := r.templateCfg.FormatIndent(childDepth)
+			r.insertSeparator(indent, builder)
+		}
 
 		if err := r.renderNode(attrName, attr, childDepth, builder); err != nil {
 			return err
@@ -139,35 +137,23 @@ func (r *Renderer) getSortedAttributeNames(node *schema.Node) []string {
 	return attrNames
 }
 
-// getSeparatorForNode determines if separators should be used for this node's children.
-// The depth parameter should be the depth of the children being rendered, not the parent.
-// Separators are only applied to children of object types (not lists, even if they contain objects).
-func (r *Renderer) getSeparatorForNode(node *schema.Node, childDepth int) *ObjectSeparator {
-	// Only apply separators to children of object nodes
-	// Lists are not included even if they have element_type=object
-	if node.Type == "object" {
-		return r.templateCfg.GetSeparatorForLevel(childDepth)
+// shouldInsertSeparator determines if a separator should be inserted before this attribute.
+func (r *Renderer) shouldInsertSeparator(index int, _ *schema.Node, depth int) bool {
+	// Don't insert before the first item
+	if index == 0 {
+		return false
 	}
-	return nil
+	// Only insert separators if configured for this depth
+	return slices.Contains(r.templateCfg.SeparatorIndents, depth)
 }
 
-// insertSeparatorIfNeeded inserts a separator before child object nodes if configured.
-func (r *Renderer) insertSeparatorIfNeeded(
-	separator *ObjectSeparator,
-	index int,
-	attr *schema.Node,
-	depth int,
-	builder *strings.Builder,
-) {
-	if separator == nil || index == 0 || attr.Type != "object" {
-		return
-	}
-
-	indent := r.templateCfg.FormatIndent(depth)
-	separatorText := r.templateCfg.RenderSeparator(separator, indent)
-	if separatorText != "" {
-		builder.WriteString(separatorText)
-	}
+// insertSeparator writes a separator line to the builder with proper indentation.
+func (r *Renderer) insertSeparator(indent string, builder *strings.Builder) {
+	// Extract just the space indent (remove bullet if present)
+	spaceIndent := strings.TrimSuffix(indent, "- ")
+	builder.WriteString("\n")
+	builder.WriteString(spaceIndent)
+	builder.WriteString("---\n\n")
 }
 
 // Injector handles injecting generated markdown into documentation files.

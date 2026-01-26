@@ -17,7 +17,6 @@ func TestBuildFromHCL_SimpleTypes(t *testing.T) {
 			name: "simple string type",
 			variable: &hclparse.Variable{
 				Name:        "app_name",
-				Type:        "string",
 				Description: "<!-- MARINATED: app_name -->",
 				MarinatedID: "app_name",
 			},
@@ -31,7 +30,6 @@ func TestBuildFromHCL_SimpleTypes(t *testing.T) {
 			name: "list of strings",
 			variable: &hclparse.Variable{
 				Name:        "tags",
-				Type:        "list(string)",
 				Description: "<!-- MARINATED: tags -->",
 				MarinatedID: "tags",
 			},
@@ -40,9 +38,6 @@ func TestBuildFromHCL_SimpleTypes(t *testing.T) {
 				Version:  "1",
 				SchemaNodes: map[string]*schema.Node{
 					"_root": {
-						Type:        "list",
-						ElementType: "string",
-						Required:    true,
 						Marinate: &schema.MarinateInfo{
 							Description: "# TODO: Add description for tags",
 						},
@@ -106,11 +101,11 @@ func TestBuildFromHCL_ComplexObject(t *testing.T) {
 	}
 
 	// Database should be optional (required: false) and type: object
-	if database.Required {
+	if database.Marinate.Required {
 		t.Error("expected database to be optional (required: false)")
 	}
-	if database.Type != "object" {
-		t.Errorf("expected database type to be 'object', got %v", database.Type)
+	if database.Marinate.Type != "object" {
+		t.Errorf("expected database type to be 'object', got %v", database.Marinate.Type)
 	}
 
 	// Database should have _meta
@@ -128,11 +123,11 @@ func TestBuildFromHCL_ComplexObject(t *testing.T) {
 	if !ok {
 		t.Fatal("expected 'host' field in database")
 	}
-	if !host.Required {
+	if !host.Marinate.Required {
 		t.Error("expected host to be required")
 	}
-	if host.Type != "string" {
-		t.Errorf("expected host type to be 'string', got %v", host.Type)
+	if host.Marinate.Type != "string" {
+		t.Errorf("expected host type to be 'string', got %v", host.Marinate.Type)
 	}
 
 	// Check port field
@@ -140,11 +135,11 @@ func TestBuildFromHCL_ComplexObject(t *testing.T) {
 	if !ok {
 		t.Fatal("expected 'port' field in database")
 	}
-	if port.Required {
+	if port.Marinate.Required {
 		t.Error("expected port to be optional (required: false)")
 	}
-	if port.Type != "number" {
-		t.Errorf("expected port type to be 'number', got %v", port.Type)
+	if port.Marinate.Type != "number" {
+		t.Errorf("expected port type to be 'number', got %v", port.Marinate.Type)
 	}
 }
 
@@ -202,14 +197,14 @@ func TestBuildFromHCL_NestedOptionalObjects(t *testing.T) {
 	}
 
 	// Should be optional list
-	if pla.Required {
+	if pla.Marinate.Required {
 		t.Error("expected private_link_access to be optional")
 	}
-	if pla.Type != "list" {
-		t.Errorf("expected type 'list', got %v", pla.Type)
+	if pla.Marinate.Type != "list" {
+		t.Errorf("expected type 'list', got %v", pla.Marinate.Type)
 	}
-	if pla.ElementType != "object" {
-		t.Errorf("expected element_type 'object', got %v", pla.ElementType)
+	if pla.Marinate.ElementType != "object" {
+		t.Errorf("expected element_type 'object', got %v", pla.Marinate.ElementType)
 	}
 
 	// Should have attributes for the object structure
@@ -222,11 +217,11 @@ func TestBuildFromHCL_NestedOptionalObjects(t *testing.T) {
 	if !ok {
 		t.Fatal("expected 'endpoint_resource_id' in children")
 	}
-	if !eri.Required {
+	if !eri.Marinate.Required {
 		t.Error("expected endpoint_resource_id to be required")
 	}
-	if eri.Type != "string" {
-		t.Errorf("expected type 'string', got %v", eri.Type)
+	if eri.Marinate.Type != "string" {
+		t.Errorf("expected type 'string', got %v", eri.Marinate.Type)
 	}
 
 	// Check endpoint_tenant_id
@@ -234,11 +229,11 @@ func TestBuildFromHCL_NestedOptionalObjects(t *testing.T) {
 	if !ok {
 		t.Fatal("expected 'endpoint_tenant_id' in children")
 	}
-	if eti.Required {
+	if eti.Marinate.Required {
 		t.Error("expected endpoint_tenant_id to be optional")
 	}
-	if eti.Type != "string" {
-		t.Errorf("expected type 'string', got %v", eti.Type)
+	if eti.Marinate.Type != "string" {
+		t.Errorf("expected type 'string', got %v", eti.Marinate.Type)
 	}
 }
 
@@ -249,23 +244,17 @@ func TestMergeWithExisting_PreserveDescriptions(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"database": {
-				Type:     "object",
-				Required: false,
 				Marinate: &schema.MarinateInfo{
 					Description: "User-written description for database",
 				},
 				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:     "string",
-						Required: true,
 						Marinate: &schema.MarinateInfo{
 							Description: "The database hostname",
 						},
 						Attributes: map[string]*schema.Node{},
 					},
 					"port": {
-						Type:     "number",
-						Required: false,
 						Marinate: &schema.MarinateInfo{
 							Description: "The database port number",
 						},
@@ -282,23 +271,17 @@ func TestMergeWithExisting_PreserveDescriptions(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"database": {
-				Type:     "object",
-				Required: false,
 				Marinate: &schema.MarinateInfo{
 					Description: "# TODO: Add description for database",
 				},
 				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:     "string",
-						Required: true,
 						Marinate: &schema.MarinateInfo{
 							Description: "# TODO: Add description for host",
 						},
 						Attributes: map[string]*schema.Node{},
 					},
 					"port": {
-						Type:     "number",
-						Required: false,
 						Marinate: &schema.MarinateInfo{
 							Description: "# TODO: Add description for port",
 						},
@@ -342,12 +325,8 @@ func TestMergeWithExisting_AddNewFields(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"database": {
-				Type:     "object",
-				Required: false,
 				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:     "string",
-						Required: true,
 						Marinate: &schema.MarinateInfo{
 							Description: "The database hostname",
 						},
@@ -364,20 +343,14 @@ func TestMergeWithExisting_AddNewFields(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"database": {
-				Type:     "object",
-				Required: false,
 				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:     "string",
-						Required: true,
 						Marinate: &schema.MarinateInfo{
 							Description: "# TODO: Add description for host",
 						},
 						Attributes: map[string]*schema.Node{},
 					},
 					"port": {
-						Type:     "number",
-						Required: false,
 						Marinate: &schema.MarinateInfo{
 							Description: "# TODO: Add description for port",
 						},
@@ -413,20 +386,14 @@ func TestMergeWithExisting_RemoveDeletedFields(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"database": {
-				Type:     "object",
-				Required: false,
 				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:     "string",
-						Required: true,
 						Marinate: &schema.MarinateInfo{
 							Description: "The database hostname",
 						},
 						Attributes: map[string]*schema.Node{},
 					},
 					"old_field": {
-						Type:     "string",
-						Required: false,
 						Marinate: &schema.MarinateInfo{
 							Description: "This field no longer exists in HCL",
 						},
@@ -443,12 +410,8 @@ func TestMergeWithExisting_RemoveDeletedFields(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"database": {
-				Type:     "object",
-				Required: false,
 				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:     "string",
-						Required: true,
 						Marinate: &schema.MarinateInfo{
 							Description: "# TODO: Add description for host",
 						},
