@@ -1,7 +1,8 @@
 package marinatemd
 
 import (
-	"github.com/glueckkanja/marinatemd/internal/logger"
+	"fmt"
+
 	"github.com/spf13/cobra"
 )
 
@@ -17,10 +18,10 @@ var (
 // versionCmd represents the version command.
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Print the version number of marinatemd",
-	Long:  `All software has versions. This is marinatemd's.`,
+	Short: "Print the version number of marinate",
+	Long:  `All software has versions. This is marinate's.`,
 	Run: func(_ *cobra.Command, _ []string) {
-		logger.Log.Info("marinatemd", "version", Version, "commit", Commit, "built", BuildDate)
+		fmt.Printf("marinate version %s (commit: %s, built: %s)\n", Version, Commit, BuildDate)
 	},
 }
 

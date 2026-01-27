@@ -15,7 +15,7 @@ all: build
 .PHONY: build
 build: ## Build the CLI binary
 	@echo "Building $(BINARY_NAME)..."
-	@go build -ldflags "$(LDFLAGS)" -o $(BINARY_NAME) .
+	@go build -ldflags "$(LDFLAGS)" -o $(BINARY_NAME) ./cmd/marinate
 
 .PHONY: install
 install: ## Install the CLI binary to $GOPATH/bin
@@ -58,7 +58,7 @@ mod: ## Download and tidy dependencies
 
 .PHONY: run
 run: ## Run the CLI (use ARGS to pass arguments, e.g., make run ARGS=".")
-	@go run -ldflags "$(LDFLAGS)" . $(ARGS)
+	@go run -ldflags "$(LDFLAGS)" ./cmd/marinate $(ARGS)
 
 .PHONY: tf-docs
 tf-docs: ## Generate Terraform documentation from examples folder

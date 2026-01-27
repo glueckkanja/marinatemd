@@ -9,6 +9,7 @@
 *.dylib
 marinatemd
 !marinatemd/
+marinate
 
 # Test binary, built with `go test -c`
 *.test
