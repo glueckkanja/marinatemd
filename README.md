@@ -25,6 +25,36 @@ This is particularly useful for platform teams shipping reusable Terraform modul
 
 Built in Go, works with Terraform and OpenTofu, plays nice with terraform-docs.
 
+## Installation
+
+### Quick Install (Linux/macOS)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/glueckkanja/marinatemd/main/install.sh | bash
+```
+
+### Manual Download
+
+Download the latest release for your platform from the [releases page](https://github.com/glueckkanja/marinatemd/releases/latest):
+
+```bash
+# Linux x86_64
+wget https://github.com/glueckkanja/marinatemd/releases/latest/download/marinate_linux_amd64.tar.gz
+tar -xzf marinate_linux_amd64.tar.gz
+sudo mv marinate /usr/local/bin/
+
+# Linux ARM64
+wget https://github.com/glueckkanja/marinatemd/releases/latest/download/marinate_linux_arm64.tar.gz
+tar -xzf marinate_linux_arm64.tar.gz
+sudo mv marinate /usr/local/bin/
+```
+
+### Verify Installation
+
+```bash
+marinate version
+```
+
 ## How It Works
 
 ### Step 1: Extract the Schema
