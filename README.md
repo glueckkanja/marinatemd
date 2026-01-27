@@ -131,7 +131,7 @@ If you're using terraform-docs for basic variable documentation, run it now to g
 Run the inject command to read your YAML schemas and inject hierarchical markdown:
 
 ```bash
-marinatemd inject
+marinate inject
 ```
 
 This generates markdown like:
@@ -165,8 +165,8 @@ Parses `variables.tf` files for variables marked with `<!-- MARINATED: name -->`
 **Basic usage:**
 
 ```bash
-marinatemd export .
-marinatemd export /path/to/terraform/module
+marinate export .
+marinate export /path/to/terraform/module
 ```
 
 **What it does:**
@@ -195,16 +195,16 @@ Reads YAML schemas and renders them as hierarchical markdown, injecting the outp
 
 ```bash
 # Default: inject from ./docs/variables/*.yaml into ./README.md
-marinatemd inject
+marinate inject
 
 # Custom schema directory
-marinatemd inject /path/to/yaml/schemas
+marinate inject /path/to/yaml/schemas
 
 # Inject into Terraform variable files instead
-marinatemd inject --inject-type terraform --terraform-module ./terraform
+marinate inject --inject-type terraform --terraform-module ./terraform
 
 # Inject into both README and Terraform files
-marinatemd inject --inject-type both --terraform-module ./terraform
+marinate inject --inject-type both --terraform-module ./terraform
 ```
 
 **Arguments:**
@@ -231,19 +231,19 @@ marinatemd inject --inject-type both --terraform-module ./terraform
 
 ```bash
 # Default paths
-marinatemd inject
+marinate inject
 
 # Custom markdown target
-marinatemd inject --markdown-file docs/VARIABLES.md
+marinate inject --markdown-file docs/VARIABLES.md
 
 # Update Terraform files with rendered docs
-marinatemd inject --inject-type terraform --terraform-module .
+marinate inject --inject-type terraform --terraform-module .
 
 # Update both README and Terraform files
-marinatemd inject --inject-type both --terraform-module . --markdown-file README.md
+marinate inject --inject-type both --terraform-module . --markdown-file README.md
 
 # Custom schema location
-marinatemd inject /custom/schemas --markdown-file docs/API.md
+marinate inject /custom/schemas --markdown-file docs/API.md
 ```
 
 **Path resolution:**
@@ -258,13 +258,13 @@ Takes a markdown file with multiple MARINATED variable sections and splits it in
 
 ```bash
 # Default: split docs/README.md into docs/variables/*.md
-marinatemd split .
+marinate split .
 
 # Custom paths
-marinatemd split --input docs/README.md --output docs/split .
+marinate split --input docs/README.md --output docs/split .
 
 # Add header/footer templates
-marinatemd split --header _header.md --footer _footer.md .
+marinate split --header _header.md --footer _footer.md .
 ```
 
 **Flags:**
@@ -292,10 +292,10 @@ Useful when you want per-variable documentation files instead of a monolithic RE
 terraform-docs markdown table . > docs/README.md
 
 # Inject MARINATED documentation
-marinatemd inject --markdown-file docs/README.md
+marinate inject --markdown-file docs/README.md
 
 # Split into individual files with custom header/footer
-marinatemd split --header templates/header.md --footer templates/footer.md
+marinate split --header templates/header.md --footer templates/footer.md
 ```
 
 ## Configuration

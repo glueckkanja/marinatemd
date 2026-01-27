@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-BINARY_NAME := marinatemd
+BINARY_NAME := marinate
 VERSION ?= dev
 # Fallback must match the default in cmd/marinatemd/version.go
 COMMIT_FALLBACK := none

@@ -13,7 +13,7 @@ before:
 builds:
   - id: marinatemd
     main: ./main.go
-    binary: marinatemd
+    binary: marinate
 
     # Environments to build for
     env:
@@ -45,9 +45,9 @@ builds:
 
     ldflags:
       - -s -w
-      - -X github.com/glueckkanja/marinatemd/cmd/marinatemd.version={{.Version}}
-      - -X github.com/glueckkanja/marinatemd/cmd/marinatemd.commit={{.Commit}}
-      - -X github.com/glueckkanja/marinatemd/cmd/marinatemd.date={{.Date}}
+      - -X github.com/glueckkanja/marinatemd/cmd/marinatemd.Version={{.Version}}
+      - -X github.com/glueckkanja/marinatemd/cmd/marinatemd.Commit={{.Commit}}
+      - -X github.com/glueckkanja/marinatemd/cmd/marinatemd.BuildDate={{.Date}}
 
 archives:
   - id: marinatemd-archive
