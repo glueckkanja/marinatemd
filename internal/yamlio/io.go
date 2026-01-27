@@ -11,21 +11,29 @@ import (
 
 // Reader handles reading YAML schema files from disk.
 type Reader struct {
-	docsPath string // Base path for docs/variables/ directory
+	exportPath string // Base path for export/variables/ directory
 }
 
 // NewReader creates a new YAML reader.
-func NewReader(docsPath string) *Reader {
+//
+// The exportPath should be the parent directory that contains the "variables" folder.
+// For example, if your YAML files are in "/path/to/project/docs/variables/", you should
+// pass "/path/to/project/docs" as the exportPath. The Reader will automatically append
+// "variables" to construct the full path to the YAML files.
+//
+// This design allows the Reader to work with the standard directory structure where
+// all schema YAML files are stored in a "variables" subdirectory.
+func NewReader(exportPath string) *Reader {
 	return &Reader{
-		docsPath: docsPath,
+		exportPath: exportPath,
 	}
 }
 
 // ReadSchema reads a YAML schema file for the given variable name.
 // Returns nil, nil if the file doesn't exist (not an error condition).
 func (r *Reader) ReadSchema(variableName string) (*schema.Schema, error) {
-	// Construct path: {docsPath}/variables/{variableName}.yaml
-	yamlPath := filepath.Join(r.docsPath, "variables", variableName+".yaml")
+	// Construct path: {exportPath}/variables/{variableName}.yaml
+	yamlPath := filepath.Join(r.exportPath, "variables", variableName+".yaml")
 
 	// Check if file exists
 	if _, err := os.Stat(yamlPath); os.IsNotExist(err) {
@@ -50,7 +58,7 @@ func (r *Reader) ReadSchema(variableName string) (*schema.Schema, error) {
 
 // SchemaExists checks if a YAML schema file exists for the given variable.
 func (r *Reader) SchemaExists(variableName string) (bool, error) {
-	yamlPath := filepath.Join(r.docsPath, "variables", variableName+".yaml")
+	yamlPath := filepath.Join(r.exportPath, "variables", variableName+".yaml")
 	_, err := os.Stat(yamlPath)
 	if os.IsNotExist(err) {
 		return false, nil
@@ -63,20 +71,20 @@ func (r *Reader) SchemaExists(variableName string) (bool, error) {
 
 // Writer handles writing YAML schema files to disk.
 type Writer struct {
-	docsPath string // Base path for docs/variables/ directory
+	exportPath string // Base path for export/variables/ directory
 }
 
 // NewWriter creates a new YAML writer.
-func NewWriter(docsPath string) *Writer {
+func NewWriter(exportPath string) *Writer {
 	return &Writer{
-		docsPath: docsPath,
+		exportPath: exportPath,
 	}
 }
 
 // WriteSchema writes a schema to a YAML file.
 func (w *Writer) WriteSchema(s *schema.Schema) error {
-	// Ensure docs/variables/ directory exists
-	varDir := filepath.Join(w.docsPath, "variables")
+	// Ensure export/variables/ directory exists
+	varDir := filepath.Join(w.exportPath, "variables")
 	if err := os.MkdirAll(varDir, 0750); err != nil {
 		return fmt.Errorf("failed to create variables directory: %w", err)
 	}
@@ -87,7 +95,7 @@ func (w *Writer) WriteSchema(s *schema.Schema) error {
 		return fmt.Errorf("failed to marshal schema to YAML: %w", err)
 	}
 
-	// Write to file: {docsPath}/variables/{schema.Variable}.yaml
+	// Write to file: {exportPath}/variables/{schema.Variable}.yaml
 	yamlPath := filepath.Join(varDir, s.Variable+".yaml")
 	if writeErr := os.WriteFile(yamlPath, yamlBytes, 0600); writeErr != nil {
 		return fmt.Errorf("failed to write YAML file %s: %w", yamlPath, writeErr)

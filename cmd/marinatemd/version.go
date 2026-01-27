@@ -1,8 +1,7 @@
 package marinatemd
 
 import (
-	"fmt"
-
+	"github.com/c4a8-azure/marinatemd/internal/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -21,7 +20,7 @@ var versionCmd = &cobra.Command{
 	Short: "Print the version number of marinatemd",
 	Long:  `All software has versions. This is marinatemd's.`,
 	Run: func(_ *cobra.Command, _ []string) {
-		fmt.Printf("marinatemd %s (commit: %s, built: %s)\n", Version, Commit, BuildDate)
+		logger.Log.Info("marinatemd", "version", Version, "commit", Commit, "built", BuildDate)
 	},
 }
 

@@ -17,7 +17,6 @@ func TestBuildFromHCL_SimpleTypes(t *testing.T) {
 			name: "simple string type",
 			variable: &hclparse.Variable{
 				Name:        "app_name",
-				Type:        "string",
 				Description: "<!-- MARINATED: app_name -->",
 				MarinatedID: "app_name",
 			},
@@ -31,7 +30,6 @@ func TestBuildFromHCL_SimpleTypes(t *testing.T) {
 			name: "list of strings",
 			variable: &hclparse.Variable{
 				Name:        "tags",
-				Type:        "list(string)",
 				Description: "<!-- MARINATED: tags -->",
 				MarinatedID: "tags",
 			},
@@ -40,12 +38,10 @@ func TestBuildFromHCL_SimpleTypes(t *testing.T) {
 				Version:  "1",
 				SchemaNodes: map[string]*schema.Node{
 					"_root": {
-						Type:        "list",
-						ElementType: "string",
-						Required:    true,
-						Meta: &schema.MetaInfo{
+						Marinate: &schema.MarinateInfo{
 							Description: "# TODO: Add description for tags",
 						},
+						Attributes: map[string]*schema.Node{},
 					},
 				},
 			},
@@ -105,45 +101,45 @@ func TestBuildFromHCL_ComplexObject(t *testing.T) {
 	}
 
 	// Database should be optional (required: false) and type: object
-	if database.Required {
+	if database.Marinate.Required {
 		t.Error("expected database to be optional (required: false)")
 	}
-	if database.Type != "object" {
-		t.Errorf("expected database type to be 'object', got %v", database.Type)
+	if database.Marinate.Type != "object" {
+		t.Errorf("expected database type to be 'object', got %v", database.Marinate.Type)
 	}
 
 	// Database should have _meta
-	if database.Meta == nil {
-		t.Error("expected database to have _meta")
+	if database.Marinate == nil {
+		t.Error("expected database to have _marinate")
 	}
 
-	// Database should have children (host, port, ssl_mode)
-	if len(database.Children) == 0 {
-		t.Fatal("expected database to have children")
+	// Database should have attributes (host, port, ssl_mode)
+	if len(database.Attributes) == 0 {
+		t.Fatal("expected database to have attributes")
 	}
 
 	// Check host field
-	host, ok := database.Children["host"]
+	host, ok := database.Attributes["host"]
 	if !ok {
 		t.Fatal("expected 'host' field in database")
 	}
-	if !host.Required {
+	if !host.Marinate.Required {
 		t.Error("expected host to be required")
 	}
-	if host.Type != "string" {
-		t.Errorf("expected host type to be 'string', got %v", host.Type)
+	if host.Marinate.Type != "string" {
+		t.Errorf("expected host type to be 'string', got %v", host.Marinate.Type)
 	}
 
 	// Check port field
-	port, ok := database.Children["port"]
+	port, ok := database.Attributes["port"]
 	if !ok {
 		t.Fatal("expected 'port' field in database")
 	}
-	if port.Required {
+	if port.Marinate.Required {
 		t.Error("expected port to be optional (required: false)")
 	}
-	if port.Type != "number" {
-		t.Errorf("expected port type to be 'number', got %v", port.Type)
+	if port.Marinate.Type != "number" {
+		t.Errorf("expected port type to be 'number', got %v", port.Marinate.Type)
 	}
 }
 
@@ -201,43 +197,43 @@ func TestBuildFromHCL_NestedOptionalObjects(t *testing.T) {
 	}
 
 	// Should be optional list
-	if pla.Required {
+	if pla.Marinate.Required {
 		t.Error("expected private_link_access to be optional")
 	}
-	if pla.Type != "list" {
-		t.Errorf("expected type 'list', got %v", pla.Type)
+	if pla.Marinate.Type != "list" {
+		t.Errorf("expected type 'list', got %v", pla.Marinate.Type)
 	}
-	if pla.ElementType != "object" {
-		t.Errorf("expected element_type 'object', got %v", pla.ElementType)
+	if pla.Marinate.ElementType != "object" {
+		t.Errorf("expected element_type 'object', got %v", pla.Marinate.ElementType)
 	}
 
-	// Should have children for the object structure
-	if len(pla.Children) == 0 {
-		t.Fatal("expected private_link_access to have children describing object structure")
+	// Should have attributes for the object structure
+	if len(pla.Attributes) == 0 {
+		t.Fatal("expected private_link_access to have attributes describing object structure")
 	}
 
 	// Check endpoint_resource_id
-	eri, ok := pla.Children["endpoint_resource_id"]
+	eri, ok := pla.Attributes["endpoint_resource_id"]
 	if !ok {
 		t.Fatal("expected 'endpoint_resource_id' in children")
 	}
-	if !eri.Required {
+	if !eri.Marinate.Required {
 		t.Error("expected endpoint_resource_id to be required")
 	}
-	if eri.Type != "string" {
-		t.Errorf("expected type 'string', got %v", eri.Type)
+	if eri.Marinate.Type != "string" {
+		t.Errorf("expected type 'string', got %v", eri.Marinate.Type)
 	}
 
 	// Check endpoint_tenant_id
-	eti, ok := pla.Children["endpoint_tenant_id"]
+	eti, ok := pla.Attributes["endpoint_tenant_id"]
 	if !ok {
 		t.Fatal("expected 'endpoint_tenant_id' in children")
 	}
-	if eti.Required {
+	if eti.Marinate.Required {
 		t.Error("expected endpoint_tenant_id to be optional")
 	}
-	if eti.Type != "string" {
-		t.Errorf("expected type 'string', got %v", eti.Type)
+	if eti.Marinate.Type != "string" {
+		t.Errorf("expected type 'string', got %v", eti.Marinate.Type)
 	}
 }
 
@@ -248,21 +244,21 @@ func TestMergeWithExisting_PreserveDescriptions(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"database": {
-				Type:     "object",
-				Required: false,
-				Meta: &schema.MetaInfo{
+				Marinate: &schema.MarinateInfo{
 					Description: "User-written description for database",
 				},
-				Children: map[string]*schema.Node{
+				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:        "string",
-						Required:    true,
-						Description: "The database hostname",
+						Marinate: &schema.MarinateInfo{
+							Description: "The database hostname",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 					"port": {
-						Type:        "number",
-						Required:    false,
-						Description: "The database port number",
+						Marinate: &schema.MarinateInfo{
+							Description: "The database port number",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 				},
 			},
@@ -275,21 +271,21 @@ func TestMergeWithExisting_PreserveDescriptions(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"database": {
-				Type:     "object",
-				Required: false,
-				Meta: &schema.MetaInfo{
+				Marinate: &schema.MarinateInfo{
 					Description: "# TODO: Add description for database",
 				},
-				Children: map[string]*schema.Node{
+				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:        "string",
-						Required:    true,
-						Description: "# TODO: Add description for host",
+						Marinate: &schema.MarinateInfo{
+							Description: "# TODO: Add description for host",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 					"port": {
-						Type:        "number",
-						Required:    false,
-						Description: "# TODO: Add description for port",
+						Marinate: &schema.MarinateInfo{
+							Description: "# TODO: Add description for port",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 				},
 			},
@@ -304,13 +300,21 @@ func TestMergeWithExisting_PreserveDescriptions(t *testing.T) {
 
 	// Check that user descriptions are preserved
 	db := merged.SchemaNodes["database"]
-	if db.Meta.Description != "User-written description for database" {
-		t.Errorf("expected user description to be preserved, got %v", db.Meta.Description)
+	if db.Marinate == nil || db.Marinate.Description != "User-written description for database" {
+		if db.Marinate == nil {
+			t.Error("expected database to have Marinate")
+		} else {
+			t.Errorf("expected user description to be preserved, got %v", db.Marinate.Description)
+		}
 	}
 
-	host := db.Children["host"]
-	if host.Description != "The database hostname" {
-		t.Errorf("expected user description to be preserved, got %v", host.Description)
+	host := db.Attributes["host"]
+	if host.Marinate == nil || host.Marinate.Description != "The database hostname" {
+		if host.Marinate == nil {
+			t.Error("expected host to have Marinate")
+		} else {
+			t.Errorf("expected user description to be preserved, got %v", host.Marinate.Description)
+		}
 	}
 }
 
@@ -321,13 +325,12 @@ func TestMergeWithExisting_AddNewFields(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"database": {
-				Type:     "object",
-				Required: false,
-				Children: map[string]*schema.Node{
+				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:        "string",
-						Required:    true,
-						Description: "The database hostname",
+						Marinate: &schema.MarinateInfo{
+							Description: "The database hostname",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 				},
 			},
@@ -340,18 +343,18 @@ func TestMergeWithExisting_AddNewFields(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"database": {
-				Type:     "object",
-				Required: false,
-				Children: map[string]*schema.Node{
+				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:        "string",
-						Required:    true,
-						Description: "# TODO: Add description for host",
+						Marinate: &schema.MarinateInfo{
+							Description: "# TODO: Add description for host",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 					"port": {
-						Type:        "number",
-						Required:    false,
-						Description: "# TODO: Add description for port",
+						Marinate: &schema.MarinateInfo{
+							Description: "# TODO: Add description for port",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 				},
 			},
@@ -366,12 +369,12 @@ func TestMergeWithExisting_AddNewFields(t *testing.T) {
 
 	// Check that new field is added
 	db := merged.SchemaNodes["database"]
-	if _, ok := db.Children["port"]; !ok {
+	if _, ok := db.Attributes["port"]; !ok {
 		t.Error("expected new 'port' field to be added")
 	}
 
 	// Check that existing description is preserved
-	if db.Children["host"].Description != "The database hostname" {
+	if db.Attributes["host"].Marinate == nil || db.Attributes["host"].Marinate.Description != "The database hostname" {
 		t.Error("expected existing description to be preserved")
 	}
 }
@@ -383,18 +386,18 @@ func TestMergeWithExisting_RemoveDeletedFields(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"database": {
-				Type:     "object",
-				Required: false,
-				Children: map[string]*schema.Node{
+				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:        "string",
-						Required:    true,
-						Description: "The database hostname",
+						Marinate: &schema.MarinateInfo{
+							Description: "The database hostname",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 					"old_field": {
-						Type:        "string",
-						Required:    false,
-						Description: "This field no longer exists in HCL",
+						Marinate: &schema.MarinateInfo{
+							Description: "This field no longer exists in HCL",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 				},
 			},
@@ -407,13 +410,12 @@ func TestMergeWithExisting_RemoveDeletedFields(t *testing.T) {
 		Version:  "1",
 		SchemaNodes: map[string]*schema.Node{
 			"database": {
-				Type:     "object",
-				Required: false,
-				Children: map[string]*schema.Node{
+				Attributes: map[string]*schema.Node{
 					"host": {
-						Type:        "string",
-						Required:    true,
-						Description: "# TODO: Add description for host",
+						Marinate: &schema.MarinateInfo{
+							Description: "# TODO: Add description for host",
+						},
+						Attributes: map[string]*schema.Node{},
 					},
 				},
 			},
@@ -428,12 +430,80 @@ func TestMergeWithExisting_RemoveDeletedFields(t *testing.T) {
 
 	// Check that old field is removed
 	db := merged.SchemaNodes["database"]
-	if _, ok := db.Children["old_field"]; ok {
+	if _, ok := db.Attributes["old_field"]; ok {
 		t.Error("expected 'old_field' to be removed")
 	}
 
 	// Check that existing field is preserved
-	if _, ok := db.Children["host"]; !ok {
+	if _, ok := db.Attributes["host"]; !ok {
 		t.Error("expected 'host' field to be preserved")
+	}
+}
+
+func TestShowDescription_DefaultBehavior(t *testing.T) {
+	// When ShowDescription is nil (omitted), description should be visible by default
+	node := &schema.Node{
+		Marinate: &schema.MarinateInfo{
+			Description:     "This is a test description",
+			ShowDescription: nil, // Omitted - should default to showing description
+			Type:            "string",
+			Required:        true,
+		},
+	}
+
+	if node.Marinate.ShowDescription != nil {
+		t.Errorf("expected ShowDescription to be nil (omitted), got %v", *node.Marinate.ShowDescription)
+	}
+
+	// The description should be available
+	if node.Marinate.Description != "This is a test description" {
+		t.Errorf("expected description to be set, got %v", node.Marinate.Description)
+	}
+}
+
+func TestShowDescription_ExplicitlyHidden(t *testing.T) {
+	// When ShowDescription is explicitly false, description should be hidden
+	showDesc := false
+	node := &schema.Node{
+		Marinate: &schema.MarinateInfo{
+			Description:     "This description should be hidden",
+			ShowDescription: &showDesc,
+			Type:            "string",
+			Required:        true,
+		},
+	}
+
+	if node.Marinate.ShowDescription == nil {
+		t.Error("expected ShowDescription to be set")
+	} else if *node.Marinate.ShowDescription != false {
+		t.Error("expected ShowDescription to be false")
+	}
+
+	// The description is still present in the data, but won't be rendered
+	if node.Marinate.Description != "This description should be hidden" {
+		t.Errorf("expected description to be set, got %v", node.Marinate.Description)
+	}
+}
+
+func TestShowDescription_ExplicitlyShown(t *testing.T) {
+	// When ShowDescription is explicitly true, description should be shown
+	showDesc := true
+	node := &schema.Node{
+		Marinate: &schema.MarinateInfo{
+			Description:     "This description should be shown",
+			ShowDescription: &showDesc,
+			Type:            "string",
+			Required:        false,
+		},
+	}
+
+	if node.Marinate.ShowDescription == nil {
+		t.Error("expected ShowDescription to be set")
+	} else if *node.Marinate.ShowDescription != true {
+		t.Error("expected ShowDescription to be true")
+	}
+
+	if node.Marinate.Description != "This description should be shown" {
+		t.Errorf("expected description to be set, got %v", node.Marinate.Description)
 	}
 }

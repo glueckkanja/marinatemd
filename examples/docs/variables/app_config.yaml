@@ -1,0 +1,36 @@
+variable: app_config
+version: "1"
+schema:
+    cache:
+        _marinate:
+            description: '# TODO: Add description for cache'
+        type: object
+        redis_url:
+            _marinate:
+                description: '# TODO: Add description for redis_url'
+            type: string
+            required: true
+        ttl:
+            _marinate:
+                description: '# TODO: Add description for ttl'
+            type: number
+            default: "3600"
+    database:
+        _marinate:
+            description: '# TODO: Add description for database'
+        type: object
+        host:
+            _marinate:
+                description: '# TODO: Add description for host'
+            type: string
+            required: true
+        port:
+            _marinate:
+                description: '# TODO: Add description for port'
+            type: number
+            default: "5432"
+        ssl_mode:
+            _marinate:
+                description: '# TODO: Add description for ssl_mode'
+            type: string
+            default: require

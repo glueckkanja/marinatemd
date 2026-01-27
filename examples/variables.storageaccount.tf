@@ -1,70 +1,6 @@
 # This example file is from the Terraform Azure Verified Module for Storage Accounts
 # There are some complex variables in this module
 
-variable "access_tier" {
-  type        = string
-  default     = "Hot"
-  description = "(Optional) Defines the access tier for BlobStorage, FileStorage and StorageV2 accounts. Valid options are Hot, Cool, Cold and Premium. Defaults to Hot."
-
-  validation {
-    condition     = contains(["Hot", "Cool", "Premium", "Cold"], var.access_tier)
-    error_message = "Invalid value for access tier. Valid options are 'Hot', 'Cool','Premium' or 'Cold'."
-  }
-}
-
-variable "account_kind" {
-  type        = string
-  default     = "StorageV2"
-  description = "(Optional) Defines the Kind of account. Valid options are `BlobStorage`, `BlockBlobStorage`, `FileStorage`, `Storage` and `StorageV2`. Defaults to `StorageV2`."
-
-  validation {
-    condition     = contains(["BlobStorage", "BlockBlobStorage", "FileStorage", "Storage", "StorageV2"], var.account_kind)
-    error_message = "Invalid value for account kind. Valid options are `BlobStorage`, `BlockBlobStorage`, `FileStorage`, `Storage` and `StorageV2`. Defaults to `StorageV2`."
-  }
-}
-
-variable "account_replication_type" {
-  type        = string
-  default     = "ZRS"
-  description = "(Required) Defines the type of replication to use for this storage account. Valid options are `LRS`, `GRS`, `RAGRS`, `ZRS`, `GZRS` and `RAGZRS`.  Defaults to `ZRS`"
-  nullable    = false
-
-  validation {
-    condition     = contains(["LRS", "GRS", "RAGRS", "ZRS", "GZRS", "RAGZRS"], var.account_replication_type)
-    error_message = "Invalid value for replication type. Valid options are `LRS`, `GRS`, `RAGRS`, `ZRS`, `GZRS` and `RAGZRS`."
-  }
-}
-
-variable "account_tier" {
-  type        = string
-  default     = "Standard"
-  description = "(Required) Defines the Tier to use for this storage account. Valid options are `Standard` and `Premium`. For `BlockBlobStorage` and `FileStorage` accounts only `Premium` is valid. Changing this forces a new resource to be created."
-  nullable    = false
-
-  validation {
-    condition     = contains(["Standard", "Premium"], var.account_tier)
-    error_message = "Invalid value for account tier. Valid options are `Standard` and `Premium`. For `BlockBlobStorage` and `FileStorage` accounts only `Premium` is valid. Changing this forces a new resource to be created."
-  }
-}
-
-variable "allow_nested_items_to_be_public" {
-  type        = bool
-  default     = false
-  description = "(Optional) Allow or disallow nested items within this Account to opt into being public. Defaults to `false`."
-}
-
-variable "allowed_copy_scope" {
-  type        = string
-  default     = null
-  description = "(Optional) Restrict copy to and from Storage Accounts within an AAD tenant or with Private Links to the same VNet. Possible values are `AAD` and `PrivateLink`."
-}
-
-variable "cross_tenant_replication_enabled" {
-  type        = bool
-  default     = false
-  description = "(Optional) Should cross Tenant replication be enabled? Defaults to `false`."
-}
-
 variable "custom_domain" {
   type = object({
     name          = string
@@ -75,30 +11,6 @@ variable "custom_domain" {
  - `name` - (Required) The Custom Domain Name to use for the Storage Account, which will be validated by Azure.
  - `use_subdomain` - (Optional) Should the Custom Domain Name be validated by using indirect CNAME validation?
 EOT
-}
-
-variable "default_to_oauth_authentication" {
-  type        = bool
-  default     = null
-  description = "(Optional) Default to Azure Active Directory authorization in the Azure portal when accessing the Storage Account. The default value is `false`"
-}
-
-variable "edge_zone" {
-  type        = string
-  default     = null
-  description = "(Optional) Specifies the Edge Zone within the Azure Region where this Storage Account should exist. Changing this forces a new Storage Account to be created."
-}
-
-variable "https_traffic_only_enabled" {
-  type        = bool
-  default     = true
-  description = "(Optional) Boolean flag which forces HTTPS if enabled, see [here](https://docs.microsoft.com/azure/storage/storage-require-secure-transfer/) for more information. Defaults to `true`."
-}
-
-variable "infrastructure_encryption_enabled" {
-  type        = bool
-  default     = false
-  description = "(Optional) Is infrastructure encryption enabled? Changing this forces a new resource to be created. Defaults to `false`."
 }
 
 variable "local_user" {
@@ -170,12 +82,6 @@ variable "local_user_enabled" {
   description = "(Optional) Should Storage Account Local Users be enabled? Defaults to `false`."
 }
 
-variable "min_tls_version" {
-  type        = string
-  default     = "TLS1_2"
-  description = "(Optional) The minimum supported TLS version for the storage account. Possible values are `TLS1_0`, `TLS1_1`, and `TLS1_2`. Defaults to `TLS1_2` for new storage accounts."
-}
-
 variable "network_rules" {
   type = object({
     bypass                     = optional(set(string), ["AzureServices"])
@@ -217,55 +123,6 @@ variable "network_rules" {
 EOT
 }
 
-variable "nfsv3_enabled" {
-  type        = bool
-  default     = false
-  description = "(Optional) Is NFSv3 protocol enabled? Changing this forces a new resource to be created. Defaults to `false`."
-}
-
-variable "provisioned_billing_model_version" {
-  type        = string
-  default     = null
-  description = "(Optional) Specifies the version of the provisioned billing model (e.g. when account_kind = \"FileStorage\" for Storage File). Possible value is V2. Changing this forces a new resource to be created."
-
-  validation {
-    condition     = var.provisioned_billing_model_version == null || var.provisioned_billing_model_version == "V2"
-    error_message = "Invalid value for provisioned_billing_model_version. Valid options are `V2`."
-  }
-}
-
-variable "public_network_access_enabled" {
-  type        = bool
-  default     = false
-  description = "(Optional) Whether the public network access is enabled? Defaults to `false`."
-}
-
-variable "routing" {
-  type = object({
-    choice                      = optional(string, "MicrosoftRouting")
-    publish_internet_endpoints  = optional(bool, false)
-    publish_microsoft_endpoints = optional(bool, false)
-  })
-  default     = null
-  description = <<-EOT
- - `choice` - (Optional) Specifies the kind of network routing opted by the user. Possible values are `InternetRouting` and `MicrosoftRouting`. Defaults to `MicrosoftRouting`.
- - `publish_internet_endpoints` - (Optional) Should internet routing storage endpoints be published? Defaults to `false`.
- - `publish_microsoft_endpoints` - (Optional) Should Microsoft routing storage endpoints be published? Defaults to `false`.
-EOT
-}
-
-variable "sas_policy" {
-  type = object({
-    expiration_action = optional(string, "Log")
-    expiration_period = string
-  })
-  default     = null
-  description = <<-EOT
- - `expiration_action` - (Optional) The SAS expiration action. The only possible value is `Log` at this moment. Defaults to `Log`.
- - `expiration_period` - (Required) The SAS expiration period in format of `DD.HH:MM:SS`.
-EOT
-}
-
 variable "sftp_enabled" {
   type        = bool
   default     = false
@@ -290,22 +147,6 @@ variable "static_website" {
 EOT
 }
 
-variable "timeouts" {
-  type = object({
-    create = optional(string)
-    delete = optional(string)
-    read   = optional(string)
-    update = optional(string)
-  })
-  default     = null
-  description = <<-EOT
- - `create` - (Defaults to 60 minutes) Used when creating the Storage Account.
- - `delete` - (Defaults to 60 minutes) Used when deleting the Storage Account.
- - `read` - (Defaults to 5 minutes) Used when retrieving the Storage Account.
- - `update` - (Defaults to 60 minutes) Used when updating the Storage Account.
-EOT
-}
-
 variable "app_config" {
   type = object({
     database = optional(object({
@@ -318,5 +159,18 @@ variable "app_config" {
       ttl       = optional(number, 3600)
     }))
   })
-  description = "<!-- MARINATED: app_config -->"
+  description = <<-EOT
+<!-- MARINATED: app_config -->
+
+- `cache` - (Optional) # TODO: Add description for cache
+  - `redis_url` - (Required) # TODO: Add description for redis_url
+  - `ttl` - (Optional) # TODO: Add description for ttl
+- `database` - (Optional) # TODO: Add description for database
+  - `host` - (Required) # TODO: Add description for host
+  - `port` - (Optional) # TODO: Add description for port
+  - `ssl_mode` - (Optional) # TODO: Add description for ssl_mode
+
+
+<!-- /MARINATED: app_config -->
+  EOT
 }

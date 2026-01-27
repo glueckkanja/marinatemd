@@ -8,6 +8,7 @@
 *.so
 *.dylib
 marinatemd
+!marinatemd/
 
 # Test binary, built with `go test -c`
 *.test

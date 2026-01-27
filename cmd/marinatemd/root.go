@@ -1,59 +1,37 @@
 package marinatemd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/c4a8-azure/marinatemd/internal/config"
+	"github.com/c4a8-azure/marinatemd/internal/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var (
-	cfgFile    string
-	moduleRoot string
+	cfgFile string
+	verbose bool
+	debug   bool
 )
 
 // rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
-	Use:   "marinatemd [module-path]",
+	Use:   "marinatemd",
 	Short: "Generate structured documentation for complex Terraform/OpenTofu variables",
 	Long: `MarinateMD parses Terraform/OpenTofu variables marked with MARINATED comments,
 generates or updates YAML schema files, and injects hierarchical markdown documentation
 into README.md or other documentation files.
 
+Commands:
+  export  - Parse HCL variables and generate/merge YAML schema files
+  inject  - Read YAML schemas and inject markdown into documentation
+
 Example:
-  marinatemd .
-  marinatemd /path/to/terraform/module
-  marinatemd --config .marinated.yml .`,
-	Args: cobra.MaximumNArgs(1),
-	RunE: func(_ *cobra.Command, args []string) error {
-		// Determine module root
-		root := "."
-		if len(args) > 0 {
-			root = args[0]
-		}
-
-		// Load configuration
-		cfg, err := config.Load()
-		if err != nil {
-			return fmt.Errorf("failed to load configuration: %w", err)
-		}
-
-		// TODO: Implement main logic here
-		// - Parse HCL variables from root
-		// - Generate/update YAML schemas
-		// - Generate markdown and inject into docs
-
-		fmt.Printf("Processing module at: %s\n", root)
-		if viper.ConfigFileUsed() != "" {
-			fmt.Printf("Using config: %s\n", viper.ConfigFileUsed())
-		}
-		fmt.Printf("Docs path: %s\n", cfg.DocsPath)
-		fmt.Printf("README path: %s\n", cfg.ReadmePath)
-
-		return nil
-	},
+  marinatemd export .
+  marinatemd inject .
+  marinatemd export /path/to/terraform/module
+  marinatemd inject --docs-file docs/VARIABLES.md .`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -66,7 +44,10 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
+	cobra.OnInitialize(initLogger, initConfig)
+
+	// Set viper defaults before config file is read
+	config.SetDefaults()
 
 	// Persistent flags (available to all subcommands)
 	rootCmd.PersistentFlags().StringVarP(
@@ -77,51 +58,62 @@ func init() {
 		"config file (default searches for .marinated.yml in multiple locations)",
 	)
 
-	// Local flags (only for root command)
-	rootCmd.Flags().StringVar(&moduleRoot, "module-root", ".", "root directory of the Terraform/OpenTofu module")
+	rootCmd.PersistentFlags().BoolVarP(
+		&verbose,
+		"verbose",
+		"v",
+		false,
+		"enable verbose output (info level)",
+	)
+
+	rootCmd.PersistentFlags().BoolVarP(
+		&debug,
+		"debug",
+		"d",
+		false,
+		"enable debug output (most detailed)",
+	)
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	// Set defaults first
-	config.SetDefaults()
-
 	if cfgFile != "" {
+		logger.Log.Debug("using config file from flag", "path", cfgFile)
 		// Use config file from the flag
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Search for config in multiple locations (following terraform-docs pattern)
-		// Priority order:
-		// 1. root of module directory (if specified)
-		// 2. .config/ folder at root of module directory
-		// 3. current directory
-		// 4. .config/ folder at current directory
-		// 5. $HOME/.marinated.d/
-
+		logger.Log.Debug("searching for config file in default locations")
+		// Search for config in multiple locations
 		viper.SetConfigName(".marinated")
 		viper.SetConfigType("yml")
 
 		// Current directory
 		viper.AddConfigPath(".")
 		viper.AddConfigPath(".config")
-
-		// Module root (if different from current)
-		if moduleRoot != "" && moduleRoot != "." {
-			viper.AddConfigPath(moduleRoot)
-			viper.AddConfigPath(moduleRoot + "/.config")
-		}
+		logger.Log.Debug("added config search paths", "paths", "., .config")
 
 		// Home directory
 		if home, err := os.UserHomeDir(); err == nil {
-			viper.AddConfigPath(home + "/.marinated.d")
+			homePath := home + "/.marinated.d"
+			viper.AddConfigPath(homePath)
+			logger.Log.Debug("added home config path", "path", homePath)
 		}
 	}
 
 	// Read in environment variables that match
 	viper.SetEnvPrefix("MARINATED")
 	viper.AutomaticEnv()
+	logger.Log.Debug("environment variables enabled", "prefix", "MARINATED")
 
-	// If a config file is found, read it in
-	// Try to read the config file (ignore errors silently).
-	_ = viper.ReadInConfig()
+	// If a config file is found, read it in (ignore errors silently).
+	if err := viper.ReadInConfig(); err == nil {
+		logger.Log.Debug("config file loaded", "path", viper.ConfigFileUsed())
+	} else {
+		logger.Log.Debug("no config file found, using defaults", "error", err)
+	}
+}
+
+// initLogger sets up the logger based on verbose and debug flags.
+func initLogger() {
+	logger.Setup(verbose, debug)
 }

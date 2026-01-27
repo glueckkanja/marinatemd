@@ -2,6 +2,11 @@ package markdown
 
 import (
 	"errors"
+	"fmt"
+	"os"
+	"slices"
+	"sort"
+	"strings"
 
 	"github.com/c4a8-azure/marinatemd/internal/schema"
 )
@@ -13,50 +18,379 @@ var (
 
 // Renderer generates hierarchical markdown from schema models.
 type Renderer struct {
-	// TODO: Add configuration for markdown rendering style.
+	templateCfg *TemplateConfig
 }
 
-// NewRenderer creates a new markdown renderer.
+// NewRenderer creates a new markdown renderer with default template configuration.
 func NewRenderer() *Renderer {
-	return &Renderer{}
+	return &Renderer{
+		templateCfg: DefaultTemplateConfig(),
+	}
+}
+
+// NewRendererWithTemplate creates a new markdown renderer with custom template configuration.
+func NewRendererWithTemplate(templateCfg *TemplateConfig) *Renderer {
+	if templateCfg == nil {
+		templateCfg = DefaultTemplateConfig()
+	}
+	return &Renderer{
+		templateCfg: templateCfg,
+	}
 }
 
 // RenderSchema converts a schema to hierarchical markdown documentation.
-func (r *Renderer) RenderSchema(_ *schema.Schema) (string, error) {
-	// TODO: Implement markdown generation
-	// - Render variable name and overall description from _meta
-	// - Create nested headings/lists for object hierarchy
-	// - Include required/optional flags, defaults, examples
-	// - Format tables or definition lists for attributes
-	// - Ensure deterministic output (stable ordering)
-	return "", nil
+func (r *Renderer) RenderSchema(s *schema.Schema) (string, error) {
+	if s == nil {
+		return "", errors.New("schema cannot be nil")
+	}
+
+	var builder strings.Builder
+
+	// Render each top-level node in sorted order for deterministic output
+	nodeNames := make([]string, 0, len(s.SchemaNodes))
+	for name := range s.SchemaNodes {
+		nodeNames = append(nodeNames, name)
+	}
+	sort.Strings(nodeNames)
+
+	for i, nodeName := range nodeNames {
+		node := s.SchemaNodes[nodeName]
+
+		// Insert separator before top-level object nodes if configured for depth 0
+		if r.shouldInsertSeparator(i, node, 0) {
+			indent := r.templateCfg.FormatIndent(0)
+			r.insertSeparator(indent, &builder)
+		}
+
+		if err := r.renderNode(nodeName, node, 0, &builder); err != nil {
+			return "", fmt.Errorf("failed to render node %s: %w", nodeName, err)
+		}
+	}
+
+	return builder.String(), nil
+}
+
+// renderNode recursively renders a node and its children.
+func (r *Renderer) renderNode(name string, node *schema.Node, depth int, builder *strings.Builder) error {
+	if node == nil {
+		return nil
+	}
+
+	r.renderNodeContent(name, node, depth, builder)
+
+	if len(node.Attributes) > 0 {
+		return r.renderNodeChildren(node, depth, builder)
+	}
+
+	return nil
+}
+
+// renderNodeContent renders the current node's content if it has documentation.
+func (r *Renderer) renderNodeContent(name string, node *schema.Node, depth int, builder *strings.Builder) {
+	if node.Marinate == nil {
+		return
+	}
+
+	// Determine the description to use
+	description := node.Marinate.Description
+
+	// Check ShowDescription field - if nil (omitted), default to true
+	// If explicitly set to false, use empty description (but still render the attribute)
+	showDescription := true // Default behavior
+	if node.Marinate.ShowDescription != nil {
+		showDescription = *node.Marinate.ShowDescription
+	}
+
+	if !showDescription {
+		description = "" // Clear description but continue rendering
+	}
+
+	// Skip rendering if there's no description and no metadata to show
+	if description == "" && node.Marinate.Type == "" && !node.Marinate.Required {
+		// If there's truly nothing to render, skip it
+		if len(node.Attributes) == 0 {
+			return
+		}
+	}
+
+	// Format default and example values for display
+	defaultStr := ""
+	hasDefault := false
+	if node.Marinate.Default != nil {
+		defaultStr = fmt.Sprintf("%v", node.Marinate.Default)
+		// If the default is an empty string, show it as "" to make it explicit
+		if defaultStr == "" {
+			defaultStr = `""`
+		}
+		// Replace map[] with {} for better readability (empty map/object)
+		if defaultStr == "map[]" {
+			defaultStr = "{}"
+		}
+		hasDefault = true // Default is present, even if it's an empty string
+	}
+
+	exampleStr := ""
+	hasExample := false
+	if node.Marinate.Example != nil {
+		exampleStr = fmt.Sprintf("%v", node.Marinate.Example)
+		// If the example is an empty string, show it as "" to make it explicit
+		if exampleStr == "" {
+			exampleStr = `""`
+		}
+		// Replace map[] with {} for better readability (empty map/object)
+		if exampleStr == "map[]" {
+			exampleStr = "{}"
+		}
+		hasExample = true // Example is present, even if it's an empty string
+	}
+
+	// Determine required/optional text
+	requiredText := r.templateCfg.OptionalText
+	isRequired := node.Marinate.Required
+	if isRequired {
+		requiredText = r.templateCfg.RequiredText
+	}
+
+	ctx := TemplateContext{
+		Attribute:       name,
+		Required:        requiredText,
+		IsRequired:      isRequired,
+		Description:     description,
+		ShowDescription: showDescription,
+		Type:            node.Marinate.Type,
+		Default:         defaultStr,
+		Example:         exampleStr,
+		HasDefault:      hasDefault,
+		HasExample:      hasExample,
+		HasType:         node.Marinate.Type != "",
+	}
+
+	indent := r.templateCfg.FormatIndent(depth)
+	rendered := r.templateCfg.RenderAttribute(ctx)
+	// Trim trailing whitespace from the rendered line
+	rendered = strings.TrimRight(rendered, " \t")
+	builder.WriteString(indent)
+	builder.WriteString(rendered)
+	builder.WriteString("\n")
+}
+
+// renderNodeChildren renders all child attributes of a node.
+func (r *Renderer) renderNodeChildren(node *schema.Node, depth int, builder *strings.Builder) error {
+	attrNames := r.getSortedAttributeNames(node)
+	childDepth := depth + 1
+
+	for i, attrName := range attrNames {
+		attr := node.Attributes[attrName]
+
+		// Insert separator before object nodes if configured for this depth
+		if r.shouldInsertSeparator(i, attr, childDepth) {
+			indent := r.templateCfg.FormatIndent(childDepth)
+			r.insertSeparator(indent, builder)
+		}
+
+		if err := r.renderNode(attrName, attr, childDepth, builder); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// getSortedAttributeNames returns a sorted list of attribute names for deterministic output.
+func (r *Renderer) getSortedAttributeNames(node *schema.Node) []string {
+	attrNames := make([]string, 0, len(node.Attributes))
+	for attrName := range node.Attributes {
+		attrNames = append(attrNames, attrName)
+	}
+	sort.Strings(attrNames)
+	return attrNames
+}
+
+// shouldInsertSeparator determines if a separator should be inserted before this attribute.
+func (r *Renderer) shouldInsertSeparator(index int, _ *schema.Node, depth int) bool {
+	// Don't insert before the first item
+	if index == 0 {
+		return false
+	}
+	// Only insert separators if configured for this depth
+	return slices.Contains(r.templateCfg.SeparatorIndents, depth)
+}
+
+// insertSeparator writes a separator line to the builder with proper indentation.
+func (r *Renderer) insertSeparator(indent string, builder *strings.Builder) {
+	// Extract just the space indent (remove bullet if present)
+	spaceIndent := strings.TrimSuffix(indent, "- ")
+	builder.WriteString("\n")
+	builder.WriteString(spaceIndent)
+	builder.WriteString("---\n\n")
 }
 
 // Injector handles injecting generated markdown into documentation files.
-type Injector struct {
-	// TODO: Add state for tracking injection points.
-}
+type Injector struct{}
 
 // NewInjector creates a new markdown injector.
 func NewInjector() *Injector {
 	return &Injector{}
 }
 
-// InjectIntoFile replaces content between markers in a documentation file
-// InjectIntoFile injects generated markdown into a documentation file.
-// Looks for <!-- MARINATED: variable_name --> and <!-- /MARINATED: variable_name -->.
-func (i *Injector) InjectIntoFile(_ string, _ string, _ string) error {
-	// TODO: Implement injection logic
-	// - Read file content
-	// - Find marker pairs for the given variable
-	// - Replace content between markers
-	// - Write back to file
-	// - Preserve surrounding content exactly
+// InjectIntoFile replaces content at MARINATED markers in a documentation file.
+// It looks for <!-- MARINATED: variable_name --> markers and replaces content between
+// the start marker and <!-- /MARINATED: variable_name --> end marker.
+// The file is read, modified, and written back atomically.
+func (i *Injector) InjectIntoFile(filePath string, variableName string, markdownContent string) error {
+	// Read the entire file
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to read file: %w", err)
+	}
+
+	// Convert to string for easier manipulation
+	fileContent := string(content)
+
+	// Build the markers to find - try both with escaped and unescaped underscores
+	startMarker := fmt.Sprintf("<!-- MARINATED: %s -->", variableName)
+	endMarker := fmt.Sprintf("<!-- /MARINATED: %s -->", variableName)
+
+	escapedStartMarker := fmt.Sprintf("<!-- MARINATED: %s -->", strings.ReplaceAll(variableName, "_", "\\_"))
+	escapedEndMarker := fmt.Sprintf("<!-- /MARINATED: %s -->", strings.ReplaceAll(variableName, "_", "\\_"))
+
+	// Check if either marker exists and determine which version we're using
+	foundStartMarker := startMarker
+	foundEndMarker := endMarker
+
+	if !strings.Contains(fileContent, startMarker) {
+		if strings.Contains(fileContent, escapedStartMarker) {
+			foundStartMarker = escapedStartMarker
+			foundEndMarker = escapedEndMarker
+		} else {
+			return fmt.Errorf("marker %s not found in file", startMarker)
+		}
+	}
+
+	// Parse the file line by line
+	lines := strings.Split(fileContent, "\n")
+	var result strings.Builder
+	inMarinatedBlock := false
+	foundBlock := false
+
+	for i := 0; i < len(lines); i++ {
+		line := lines[i]
+
+		switch {
+		case strings.Contains(line, foundStartMarker):
+			foundBlock = true
+			inMarinatedBlock = true
+			i = writeMarinatedBlock(line, foundStartMarker, foundEndMarker, markdownContent, lines, i, &result)
+		case strings.Contains(line, foundEndMarker) && !inMarinatedBlock:
+			// Skip orphaned end markers
+			continue
+		default:
+			// Write non-marinated content as-is
+			result.WriteString(line)
+			if i < len(lines)-1 {
+				result.WriteString("\n")
+			}
+		}
+
+		if inMarinatedBlock {
+			inMarinatedBlock = false
+		}
+	}
+
+	if !foundBlock {
+		return fmt.Errorf("marker %s not found in file", startMarker)
+	}
+
+	// Write the modified content back to the file
+	if writeErr := os.WriteFile(filePath, []byte(result.String()), 0600); writeErr != nil {
+		return fmt.Errorf("failed to write file: %w", writeErr)
+	}
+
 	return nil
 }
 
+func writeMarinatedBlock(
+	line, foundStartMarker, foundEndMarker, markdownContent string,
+	lines []string,
+	idx int,
+	result *strings.Builder,
+) int {
+	// Extract any prefix (e.g., "Description: ")
+	prefix, _, _ := strings.Cut(line, "<!--")
+
+	// Write the start marker line
+	result.WriteString(prefix)
+	result.WriteString(foundStartMarker)
+	result.WriteString("\n\n")
+
+	// Write the content with proper spacing
+	result.WriteString(strings.TrimSpace(markdownContent))
+	result.WriteString("\n\n")
+
+	// Write the end marker
+	result.WriteString(foundEndMarker)
+	result.WriteString("\n")
+
+	// Skip everything until we find the end marker or a significant section
+	idx++
+	for idx < len(lines) {
+		currentLine := lines[idx]
+
+		// If we find an existing end marker, skip it and continue
+		if strings.Contains(currentLine, foundEndMarker) {
+			break
+		}
+
+		nextLine := strings.TrimSpace(currentLine)
+		// Stop when we hit the next significant markdown section
+		if strings.HasPrefix(nextLine, "Type:") ||
+			strings.HasPrefix(nextLine, "Default:") ||
+			strings.HasPrefix(nextLine, "###") ||
+			strings.HasPrefix(nextLine, "##") {
+			idx-- // Back up so we don't skip this line
+			break
+		}
+
+		idx++
+	}
+	return idx
+}
+
 // FindMarkers scans a file and returns all MARINATED markers found.
-func (i *Injector) FindMarkers(_ string) ([]string, error) {
-	// TODO: Parse file and extract all <!-- MARINATED: name --> markers.
-	return nil, ErrNotImplemented
+// Returns a slice of variable names extracted from <!-- MARINATED: name --> markers.
+func (i *Injector) FindMarkers(filePath string) ([]string, error) {
+	// Read the file
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+
+	// Find all MARINATED markers using a simple string search
+	var markers []string
+
+	for line := range strings.SplitSeq(string(content), "\n") {
+		// Look for <!-- MARINATED: variable_name -->
+		if strings.Contains(line, "<!-- MARINATED:") {
+			// Extract the variable name
+			before, after, found := strings.Cut(line, "<!-- MARINATED:")
+			if !found {
+				continue
+			}
+			_ = before // Unused
+
+			variableWithEnd, _, found := strings.Cut(after, "-->")
+			if !found {
+				continue
+			}
+
+			variableName := strings.TrimSpace(variableWithEnd)
+			// Handle escaped underscores in markdown (e.g., app\_config -> app_config)
+			variableName = strings.ReplaceAll(variableName, "\\_", "_")
+			if variableName != "" {
+				markers = append(markers, variableName)
+			}
+		}
+	}
+
+	return markers, nil
 }

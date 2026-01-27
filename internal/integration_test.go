@@ -113,8 +113,8 @@ variable "plain_var" {
 
 	// Step 5: Test merging - simulate user editing YAML
 	// Modify the schema to add user descriptions
-	readBack.SchemaNodes["database"].Meta.Description = "User-written database description"
-	readBack.SchemaNodes["database"].Children["host"].Description = "The database hostname or IP"
+	readBack.SchemaNodes["database"].Marinate.Description = "User-written database description"
+	readBack.SchemaNodes["database"].Attributes["host"].Marinate.Description = "The database hostname or IP"
 
 	// Write the modified version
 	if writeErr2 := writer.WriteSchema(readBack); writeErr2 != nil {
@@ -140,14 +140,14 @@ variable "plain_var" {
 	}
 
 	// Verify user descriptions were preserved
-	if merged.SchemaNodes["database"].Meta.Description != "User-written database description" {
+	if merged.SchemaNodes["database"].Marinate.Description != "User-written database description" {
 		t.Errorf("expected user description to be preserved, got %s",
-			merged.SchemaNodes["database"].Meta.Description)
+			merged.SchemaNodes["database"].Marinate.Description)
 	}
 
-	if merged.SchemaNodes["database"].Children["host"].Description != "The database hostname or IP" {
+	if merged.SchemaNodes["database"].Attributes["host"].Marinate.Description != "The database hostname or IP" {
 		t.Errorf("expected user host description to be preserved, got %s",
-			merged.SchemaNodes["database"].Children["host"].Description)
+			merged.SchemaNodes["database"].Attributes["host"].Marinate.Description)
 	}
 
 	t.Logf("✓ Merge preserved user descriptions")

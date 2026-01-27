@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/c4a8-azure/marinatemd/internal/hclparse"
+	"gopkg.in/yaml.v3"
 )
 
 // Common errors.
@@ -22,26 +24,130 @@ type Schema struct {
 }
 
 // Node represents a node in the schema tree.
-// Can be a complex object with nested children or a leaf attribute.
-// According to Option B: nodes can have both leaf fields AND children for nested objects.
+// Each node can have _marinate metadata (all schema information) and nested attribute nodes.
+// All schema metadata is stored under _marinate for clean separation.
+// Child attributes are stored as inline YAML fields to avoid extra nesting.
 type Node struct {
-	Meta     *MetaInfo        `yaml:"_meta,omitempty"`
-	Children map[string]*Node `yaml:",inline"` // Inline children at same level as other fields
-
-	// Fields present at both leaf AND parent nodes
-	Type        string `yaml:"type,omitempty"`        // Type information (string, number, bool, object, list, map, etc.)
-	Required    bool   `yaml:"required,omitempty"`    // Whether this field is required
-	Description string `yaml:"description,omitempty"` // Description for leaf nodes
-	Example     any    `yaml:"example,omitempty"`     // Example value for documentation
-
-	// Additional type information for complex types
-	ElementType string `yaml:"element_type,omitempty"` // For list/set types, the element type
-	ValueType   string `yaml:"value_type,omitempty"`   // For map types, the value type
+	Marinate   *MarinateInfo    `yaml:"_marinate,omitempty"` // All schema metadata
+	Attributes map[string]*Node `yaml:",inline"`             // Child attributes inlined
 }
 
-// MetaInfo contains metadata for complex objects (non-leaf nodes).
-type MetaInfo struct {
-	Description string `yaml:"description,omitempty"`
+// MarinateInfo contains all schema metadata for a node.
+// This includes both user-editable documentation and technical schema fields.
+type MarinateInfo struct {
+	Description     string `yaml:"description,omitempty"`      // User-editable description
+	ShowDescription *bool  `yaml:"show_description,omitempty"` // Control visibility of description in rendered output (nil = true by default)
+	Example         any    `yaml:"example,omitempty"`          // Example value for documentation
+	Type            string `yaml:"type,omitempty"`             // Type information (string, number, bool, object, list, map, etc.)
+	Required        bool   `yaml:"required,omitempty"`         // Whether this field is required
+	ElementType     string `yaml:"element_type,omitempty"`     // For list/set types, the element type
+	ValueType       string `yaml:"value_type,omitempty"`       // For map types, the value type
+	Default         any    `yaml:"default,omitempty"`          // Default value for optional fields
+}
+
+// UnmarshalYAML implements custom YAML unmarshaling for Node.
+// This separates _marinate metadata from child attributes and direct fields.
+func (n *Node) UnmarshalYAML(value *yaml.Node) error {
+	if value.Kind != yaml.MappingNode {
+		return fmt.Errorf("expected mapping node, got %v", value.Kind)
+	}
+
+	// Initialize attributes map
+	n.Attributes = make(map[string]*Node)
+
+	// Known fields that are part of the Node struct
+	knownFields := map[string]bool{
+		"_marinate":    true,
+		"type":         true,
+		"required":     true,
+		"element_type": true,
+		"value_type":   true,
+		"default":      true,
+	}
+
+	// Iterate through the mapping node
+	for i := 0; i < len(value.Content); i += 2 {
+		keyNode := value.Content[i]
+		valueNode := value.Content[i+1]
+		fieldName := keyNode.Value
+
+		switch fieldName {
+		case "_marinate":
+			// Unmarshal the _marinate metadata
+			var marinate MarinateInfo
+			if err := valueNode.Decode(&marinate); err != nil {
+				return fmt.Errorf("failed to decode _marinate: %w", err)
+			}
+			n.Marinate = &marinate
+		default:
+			// All other fields are child attributes
+			if !knownFields[fieldName] {
+				var childNode Node
+				if err := valueNode.Decode(&childNode); err != nil {
+					return fmt.Errorf("failed to decode attribute %s: %w", fieldName, err)
+				}
+				n.Attributes[fieldName] = &childNode
+			}
+		}
+	}
+
+	return nil
+}
+
+// MarshalYAML implements custom YAML marshaling for Node.
+// This ensures _marinate and direct fields are marshaled first, followed by attributes.
+func (n *Node) MarshalYAML() (any, error) {
+	// Create a yaml.Node to represent this Node
+	node := &yaml.Node{
+		Kind: yaml.MappingNode,
+	}
+
+	// Add _marinate first if it exists
+	if n.Marinate != nil {
+		marinateKey := &yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Value: "_marinate",
+		}
+
+		marinateValue := &yaml.Node{}
+		if err := marinateValue.Encode(n.Marinate); err != nil {
+			return nil, fmt.Errorf("failed to encode _marinate: %w", err)
+		}
+
+		node.Content = append(node.Content, marinateKey, marinateValue)
+	}
+
+	// Add attributes in sorted order for deterministic output
+	if len(n.Attributes) > 0 {
+		for _, name := range sortedKeys(n.Attributes) {
+			attr := n.Attributes[name]
+
+			keyNode := &yaml.Node{
+				Kind:  yaml.ScalarNode,
+				Value: name,
+			}
+
+			valueNode := &yaml.Node{}
+			if err := valueNode.Encode(attr); err != nil {
+				return nil, fmt.Errorf("failed to encode attribute %s: %w", name, err)
+			}
+
+			node.Content = append(node.Content, keyNode, valueNode)
+		}
+	}
+
+	return node, nil
+}
+
+// sortedKeys returns a sorted slice of keys from the Attributes map.
+// This ensures deterministic YAML output.
+func sortedKeys(attributes map[string]*Node) []string {
+	keys := make([]string, 0, len(attributes))
+	for name := range attributes {
+		keys = append(keys, name)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 // Builder creates schema models from parsed HCL variables.
@@ -129,15 +235,15 @@ func (b *Builder) parseObjectType(typeExpr string, nodes map[string]*Node) error
 	// Create nodes for each field
 	for fieldName, fieldType := range fields {
 		node := &Node{
-			Meta: &MetaInfo{
+			Marinate: &MarinateInfo{
 				Description: fmt.Sprintf("# TODO: Add description for %s", fieldName),
 			},
-			Children: make(map[string]*Node),
+			Attributes: make(map[string]*Node),
 		}
 
 		// Determine if field is optional
 		isOptional := strings.HasPrefix(fieldType, "optional(")
-		node.Required = !isOptional
+		node.Marinate.Required = !isOptional
 
 		// Parse the field type
 		if parseErr := b.parseFieldType(fieldType, node, fieldName); parseErr != nil {
@@ -156,9 +262,14 @@ func (b *Builder) parseFieldType(typeExpr string, node *Node, _fieldName string)
 
 	// Handle optional wrapper
 	if strings.HasPrefix(typeExpr, "optional(") {
-		innerType := extractFunctionArg(typeExpr, "optional")
-		// optional() can have a second argument (default value), extract only the first
-		innerType = extractFirstArg(innerType)
+		fullArgs := extractFunctionArg(typeExpr, "optional")
+		// optional() can have a second argument (default value)
+		innerType := extractFirstArg(fullArgs)
+		// Try to extract default value (second argument)
+		defaultValue := extractSecondArg(fullArgs)
+		if defaultValue != "" {
+			node.Marinate.Default = parseDefaultValue(defaultValue)
+		}
 		return b.parseFieldType(innerType, node, _fieldName)
 	}
 
@@ -174,9 +285,9 @@ func (b *Builder) parseFieldType(typeExpr string, node *Node, _fieldName string)
 
 	// Handle set type
 	if strings.HasPrefix(typeExpr, "set(") {
-		node.Type = "set"
+		node.Marinate.Type = "set"
 		innerType := extractFunctionArg(typeExpr, "set")
-		node.ElementType = b.simplifyType(innerType)
+		node.Marinate.ElementType = b.simplifyType(innerType)
 		return nil
 	}
 
@@ -186,13 +297,13 @@ func (b *Builder) parseFieldType(typeExpr string, node *Node, _fieldName string)
 	}
 
 	// Simple types
-	node.Type = typeExpr
+	node.Marinate.Type = typeExpr
 	return nil
 }
 
 // parseObjectFieldType parses an object type and its nested fields.
 func (b *Builder) parseObjectFieldType(typeExpr string, node *Node) error {
-	node.Type = "object"
+	node.Marinate.Type = "object"
 	content := extractFunctionArg(typeExpr, "object")
 	if strings.HasPrefix(content, "{") && strings.HasSuffix(content, "}") {
 		content = content[1 : len(content)-1]
@@ -206,9 +317,9 @@ func (b *Builder) parseObjectFieldType(typeExpr string, node *Node) error {
 
 // parseListFieldType parses a list type and its element type.
 func (b *Builder) parseListFieldType(typeExpr string, node *Node) error {
-	node.Type = "list"
+	node.Marinate.Type = "list"
 	innerType := extractFunctionArg(typeExpr, "list")
-	node.ElementType = b.simplifyType(innerType)
+	node.Marinate.ElementType = b.simplifyType(innerType)
 	// If list contains objects, parse them as children
 	if strings.HasPrefix(innerType, "object(") {
 		return b.parseNestedObjectChildren(innerType, node)
@@ -218,9 +329,9 @@ func (b *Builder) parseListFieldType(typeExpr string, node *Node) error {
 
 // parseMapFieldType parses a map type and its value type.
 func (b *Builder) parseMapFieldType(typeExpr string, node *Node) error {
-	node.Type = "map"
+	node.Marinate.Type = "map"
 	innerType := extractFunctionArg(typeExpr, "map")
-	node.ValueType = b.simplifyType(innerType)
+	node.Marinate.ValueType = b.simplifyType(innerType)
 	// If map contains objects, parse them as children
 	if strings.HasPrefix(innerType, "object(") {
 		return b.parseNestedObjectChildren(innerType, node)
@@ -245,15 +356,17 @@ func (b *Builder) parseNestedObjectChildren(objectTypeExpr string, node *Node) e
 func (b *Builder) populateChildNodes(node *Node, fields map[string]string) error {
 	for name, fieldType := range fields {
 		childNode := &Node{
-			Children: make(map[string]*Node),
+			Marinate: &MarinateInfo{
+				Description: fmt.Sprintf("# TODO: Add description for %s", name),
+			},
+			Attributes: make(map[string]*Node),
 		}
 		isOptional := strings.HasPrefix(fieldType, "optional(")
-		childNode.Required = !isOptional
+		childNode.Marinate.Required = !isOptional
 		if err := b.parseFieldType(fieldType, childNode, name); err != nil {
 			return err
 		}
-		childNode.Description = fmt.Sprintf("# TODO: Add description for %s", name)
-		node.Children[name] = childNode
+		node.Attributes[name] = childNode
 	}
 	return nil
 }
@@ -430,16 +543,16 @@ func (b *Builder) parseOptionalType(typeExpr string, nodes map[string]*Node, con
 // parseListType parses a list type.
 func (b *Builder) parseListType(typeExpr string, nodes map[string]*Node, contextName string) error {
 	node := &Node{
-		Type: "list",
-		Meta: &MetaInfo{
+		Marinate: &MarinateInfo{
 			Description: fmt.Sprintf("# TODO: Add description for %s", contextName),
+			Type:        "list",
+			Required:    true,
 		},
-		Children: make(map[string]*Node),
-		Required: true,
+		Attributes: make(map[string]*Node),
 	}
 
 	innerType := extractFunctionArg(typeExpr, "list")
-	node.ElementType = b.simplifyType(innerType)
+	node.Marinate.ElementType = b.simplifyType(innerType)
 
 	nodes["_root"] = node
 	return nil
@@ -448,16 +561,16 @@ func (b *Builder) parseListType(typeExpr string, nodes map[string]*Node, context
 // parseSetType parses a set type.
 func (b *Builder) parseSetType(typeExpr string, nodes map[string]*Node, contextName string) error {
 	node := &Node{
-		Type: "set",
-		Meta: &MetaInfo{
+		Marinate: &MarinateInfo{
 			Description: fmt.Sprintf("# TODO: Add description for %s", contextName),
+			Type:        "set",
+			Required:    true,
 		},
-		Children: make(map[string]*Node),
-		Required: true,
+		Attributes: make(map[string]*Node),
 	}
 
 	innerType := extractFunctionArg(typeExpr, "set")
-	node.ElementType = b.simplifyType(innerType)
+	node.Marinate.ElementType = b.simplifyType(innerType)
 
 	nodes["_root"] = node
 	return nil
@@ -466,16 +579,16 @@ func (b *Builder) parseSetType(typeExpr string, nodes map[string]*Node, contextN
 // parseMapType parses a map type.
 func (b *Builder) parseMapType(typeExpr string, nodes map[string]*Node, contextName string) error {
 	node := &Node{
-		Type: "map",
-		Meta: &MetaInfo{
+		Marinate: &MarinateInfo{
 			Description: fmt.Sprintf("# TODO: Add description for %s", contextName),
+			Type:        "map",
+			Required:    true,
 		},
-		Children: make(map[string]*Node),
-		Required: true,
+		Attributes: make(map[string]*Node),
 	}
 
 	innerType := extractFunctionArg(typeExpr, "map")
-	node.ValueType = b.simplifyType(innerType)
+	node.Marinate.ValueType = b.simplifyType(innerType)
 
 	// If map contains objects, parse them
 	if strings.HasPrefix(innerType, "object(") {
@@ -489,15 +602,17 @@ func (b *Builder) parseMapType(typeExpr string, nodes map[string]*Node, contextN
 		}
 		for name, fieldType := range fields {
 			childNode := &Node{
-				Children: make(map[string]*Node),
+				Marinate: &MarinateInfo{
+					Description: fmt.Sprintf("# TODO: Add description for %s", name),
+				},
+				Attributes: make(map[string]*Node),
 			}
 			isOptional := strings.HasPrefix(fieldType, "optional(")
-			childNode.Required = !isOptional
+			childNode.Marinate.Required = !isOptional
 			if parseErr5 := b.parseFieldType(fieldType, childNode, name); parseErr5 != nil {
 				return parseErr5
 			}
-			childNode.Description = fmt.Sprintf("# TODO: Add description for %s", name)
-			node.Children[name] = childNode
+			node.Attributes[name] = childNode
 		}
 	}
 
@@ -554,43 +669,51 @@ func (b *Builder) MergeWithExisting(newSchema, existing *Schema) (*Schema, error
 // mergeNodes merges two nodes, preserving descriptions from existing.
 func (b *Builder) mergeNodes(newNode, existingNode *Node) *Node {
 	merged := &Node{
-		Type:        newNode.Type,
-		Required:    newNode.Required,
-		ElementType: newNode.ElementType,
-		ValueType:   newNode.ValueType,
-		Children:    make(map[string]*Node),
+		Attributes: make(map[string]*Node),
 	}
 
-	// Preserve existing descriptions if they're not TODO placeholders
-	if existingNode.Description != "" && !b.isTODO(existingNode.Description) {
-		merged.Description = existingNode.Description
-	} else {
-		merged.Description = newNode.Description
-	}
+	// Merge Marinate metadata
+	merged.Marinate = b.mergeMarinateInfo(newNode.Marinate, existingNode.Marinate)
 
-	if existingNode.Example != nil {
-		merged.Example = existingNode.Example
-	} else {
-		merged.Example = newNode.Example
-	}
-
-	// Merge Meta
-	if newNode.Meta != nil || existingNode.Meta != nil {
-		merged.Meta = &MetaInfo{}
-		if newNode.Meta != nil {
-			merged.Meta.Description = newNode.Meta.Description
-		}
-		if existingNode.Meta != nil && existingNode.Meta.Description != "" && !b.isTODO(existingNode.Meta.Description) {
-			merged.Meta.Description = existingNode.Meta.Description
-		}
-	}
-
-	// Merge children
-	for childName, newChild := range newNode.Children {
-		if existingChild, ok := existingNode.Children[childName]; ok {
-			merged.Children[childName] = b.mergeNodes(newChild, existingChild)
+	// Merge attributes
+	for attrName, newAttr := range newNode.Attributes {
+		if existingAttr, ok := existingNode.Attributes[attrName]; ok {
+			merged.Attributes[attrName] = b.mergeNodes(newAttr, existingAttr)
 		} else {
-			merged.Children[childName] = newChild
+			merged.Attributes[attrName] = newAttr
+		}
+	}
+
+	return merged
+}
+
+// mergeMarinateInfo merges Marinate metadata from new and existing nodes.
+// Preserves user-written descriptions if they're not TODO placeholders.
+func (b *Builder) mergeMarinateInfo(newInfo, existingInfo *MarinateInfo) *MarinateInfo {
+	if newInfo == nil && existingInfo == nil {
+		return nil
+	}
+
+	merged := &MarinateInfo{}
+
+	// Start with new node's values
+	if newInfo != nil {
+		merged.Description = newInfo.Description
+		merged.Example = newInfo.Example
+		merged.Type = newInfo.Type
+		merged.Required = newInfo.Required
+		merged.ElementType = newInfo.ElementType
+		merged.ValueType = newInfo.ValueType
+		merged.Default = newInfo.Default
+	}
+
+	// Preserve existing user-written descriptions if they're not TODO placeholders
+	if existingInfo != nil {
+		if existingInfo.Description != "" && !b.isTODO(existingInfo.Description) {
+			merged.Description = existingInfo.Description
+		}
+		if existingInfo.Example != nil {
+			merged.Example = existingInfo.Example
 		}
 	}
 
@@ -601,4 +724,157 @@ func (b *Builder) mergeNodes(newNode, existingNode *Node) *Node {
 func (b *Builder) isTODO(desc string) bool {
 	re := regexp.MustCompile(`(?i)#\s*TODO`)
 	return re.MatchString(desc)
+}
+
+// extractSecondArg extracts the second argument from a comma-separated list.
+// Returns empty string if there's no second argument.
+func extractSecondArg(args string) string {
+	depth := 0
+	for i, ch := range args {
+		switch ch {
+		case '(', '{', '[':
+			depth++
+		case ')', '}', ']':
+			depth--
+		case ',':
+			if depth == 0 {
+				// Found the comma, return everything after it (trimmed)
+				secondArg := strings.TrimSpace(args[i+1:])
+				return secondArg
+			}
+		}
+	}
+	return ""
+}
+
+// parseDefaultValue converts a default value string from HCL to a Go value.
+// This handles strings, numbers, bools, lists, and maps.
+func parseDefaultValue(defaultStr string) any {
+	defaultStr = strings.TrimSpace(defaultStr)
+
+	// Handle null
+	if defaultStr == "null" {
+		return nil
+	}
+
+	// Handle boolean
+	if defaultStr == "true" {
+		return true
+	}
+	if defaultStr == "false" {
+		return false
+	}
+
+	// Handle strings (quoted)
+	if strings.HasPrefix(defaultStr, "\"") && strings.HasSuffix(defaultStr, "\"") {
+		// Unescape the string
+		unquoted := defaultStr[1 : len(defaultStr)-1]
+		return unquoted
+	}
+
+	// Handle empty list
+	if defaultStr == "[]" {
+		return []any{}
+	}
+
+	// Handle list
+	if strings.HasPrefix(defaultStr, "[") && strings.HasSuffix(defaultStr, "]") {
+		return parseListDefault(defaultStr)
+	}
+
+	// Handle empty map/object
+	if defaultStr == "{}" {
+		return map[string]any{}
+	}
+
+	// Handle map/object
+	if strings.HasPrefix(defaultStr, "{") && strings.HasSuffix(defaultStr, "}") {
+		return parseMapDefault(defaultStr)
+	}
+
+	// Try to parse as number
+	// For simplicity, we'll return the string as-is since YAML can handle numeric strings
+	// This avoids complex float/int parsing
+	return defaultStr
+}
+
+// parseListDefault parses a list default value like ["a", "b"] or [1, 2].
+func parseListDefault(listStr string) []any {
+	listStr = strings.TrimSpace(listStr)
+	if listStr == "[]" {
+		return []any{}
+	}
+
+	// Remove brackets
+	content := listStr[1 : len(listStr)-1]
+	content = strings.TrimSpace(content)
+
+	if content == "" {
+		return []any{}
+	}
+
+	// Split by comma, respecting nested structures
+	items := splitByComma(content)
+	result := make([]any, 0, len(items))
+
+	for _, item := range items {
+		item = strings.TrimSpace(item)
+		result = append(result, parseDefaultValue(item))
+	}
+
+	return result
+}
+
+// parseMapDefault parses a map/object default value.
+func parseMapDefault(mapStr string) map[string]any {
+	mapStr = strings.TrimSpace(mapStr)
+	if mapStr == "{}" {
+		return map[string]any{}
+	}
+
+	// Remove braces
+	content := mapStr[1 : len(mapStr)-1]
+	content = strings.TrimSpace(content)
+
+	if content == "" {
+		return map[string]any{}
+	}
+
+	// For now, return a simple representation
+	// Full parsing would require more complex logic
+	return map[string]any{}
+}
+
+// splitByComma splits a string by commas, respecting nested brackets.
+func splitByComma(s string) []string {
+	var result []string
+	var current strings.Builder
+	depth := 0
+
+	for _, ch := range s {
+		switch ch {
+		case '(', '{', '[':
+			depth++
+			current.WriteRune(ch)
+		case ')', '}', ']':
+			depth--
+			current.WriteRune(ch)
+		case ',':
+			if depth == 0 {
+				result = append(result, current.String())
+				current.Reset()
+			} else {
+				current.WriteRune(ch)
+			}
+		default:
+			current.WriteRune(ch)
+		}
+	}
+
+	// Add the last item
+	if current.Len() > 0 {
+		result = append(result, current.String())
+	}
+
+	return result
 }
