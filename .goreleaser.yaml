@@ -50,7 +50,8 @@ archives:
     # this name template makes the OS and Arch compatible with the results of `uname`.
     name_template: >-
       {{ .Binary }}_
-      {{- title .Os | tolower }}_
+      {{ .Version }}_
+      {{ .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
@@ -88,4 +89,4 @@ release:
 
     Download the appropriate binary for your platform from the assets below.
 
-  name_template: "{{.ProjectName}}-v{{.Version}}"
+  name_template: "v{{.Version}}"
