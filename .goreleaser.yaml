@@ -67,8 +67,6 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
-
-  format: "{{.SHA}}: {{.Message}}{{ if .Logins }} ({{ .Logins | englishJoin }}){{ end }}"
   abbrev: -1
 
 release:
