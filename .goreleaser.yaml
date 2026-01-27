@@ -51,24 +51,27 @@ builds:
 
 archives:
   - id: marinatemd-archive
-    name_template: >-
-      {{ .ProjectName }}_
-      {{- title .Os }}_
-      {{ .Arch }}
+    ids:
+      - marinatemd
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
     files:
+      - LICENSE
       - README.md
 
 checksum:
   name_template: "checksums.txt"
   algorithm: sha256
 
-snapshot:
-  version_template: "{{ incpatch .Version }}-next"
-
 changelog:
   sort: asc
   use: github
+  format: "{{.SHA}}: {{.Message}}{{ if .Logins }} ({{ .Logins | englishJoin }}){{ end }}"
+
   filters:
     exclude:
       - "^docs:"
@@ -78,19 +81,13 @@ changelog:
       - Merge pull request
       - Merge branch
   groups:
-    - title: "Features"
+    - title: Features
       regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
       order: 0
-    - title: "Bug Fixes"
-      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+    - title: "Bug fixes"
+      regexp: '^.*?bug(\([[:word:]]+\))??!?:.+$'
       order: 1
-    - title: "Performance Improvements"
-      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
-      order: 2
-    - title: "Refactors"
-      regexp: '^.*?refactor(\([[:word:]]+\))??!?:.+$'
-      order: 3
-    - title: "Other Changes"
+    - title: Others
       order: 999
 
 # GitHub release configuration
@@ -99,8 +96,12 @@ release:
     owner: glueckkanja
     name: marinatemd
 
+  ids:
+    - marinatemd-archive
+
   # Create a draft release for manual review
-  draft: false
+  draft: true
+  replace_existing_draft: true
 
   # Mark as prerelease
   prerelease: auto
@@ -119,11 +120,6 @@ release:
 
   footer: |
     ## Installation
-
-    ### Using Go
-    ```bash
-    go install github.com/glueckkanja/marinatemd/cmd/marinate@{{.Version}}
-    ```
 
     ### Download Binary
     Download the appropriate binary for your platform from the assets below.
