@@ -14,7 +14,7 @@ ARCH=$(uname -m)
 
 case $ARCH in
     x86_64)
-        ARCH="x86_64"
+        ARCH="amd64"
         ;;
     aarch64|arm64)
         ARCH="arm64"
@@ -38,7 +38,7 @@ fi
 echo "Latest version: $LATEST_VERSION"
 
 # Construct download URL
-DOWNLOAD_URL="https://github.com/$REPO/releases/download/$LATEST_VERSION/${PROJECT_NAME}_${SEMVER_VERSION}_${OS}_${ARCH}.tar.gz"
+DOWNLOAD_URL="https://github.com/$REPO/releases/download/$LATEST_VERSION/${PROJECT_NAME}_${OS}_${ARCH}.tar.gz"
 
 echo "Downloading from: $DOWNLOAD_URL"
 
