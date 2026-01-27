@@ -10,6 +10,7 @@
 marinatemd
 !marinatemd/
 marinate
+!marinate/
 
 # Test binary, built with `go test -c`
 *.test
