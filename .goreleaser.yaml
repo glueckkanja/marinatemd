@@ -12,7 +12,7 @@ before:
 
 builds:
   - id: marinatemd
-    main: ./cmd/marinate
+    main: ./cmd/marinate/main.go
     binary: marinate
 
     # Environments to build for
