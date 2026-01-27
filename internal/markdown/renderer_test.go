@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/c4a8-azure/marinatemd/internal/schema"
+	"github.com/glueckkanja/marinatemd/internal/schema"
 )
 
 func TestNewRenderer(t *testing.T) {

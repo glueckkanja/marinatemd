@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/c4a8-azure/marinatemd/internal/hclparse"
+	"github.com/glueckkanja/marinatemd/internal/hclparse"
 )
 
 // Helper function to set up test parser with HCL content.

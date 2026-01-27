@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/c4a8-azure/marinatemd/internal/schema"
+	"github.com/glueckkanja/marinatemd/internal/schema"
 	"gopkg.in/yaml.v3"
 )
 

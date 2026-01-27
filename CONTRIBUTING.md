@@ -50,7 +50,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 
 ```bash
 # Clone the repository
-git clone https://github.com/c4a8-azure/marinatemd.git
+git clone https://github.com/glueckkanja/marinatemd.git
 cd marinatemd
 
 # Install dependencies

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/c4a8-azure/marinatemd/internal/config"
-	"github.com/c4a8-azure/marinatemd/internal/logger"
-	"github.com/c4a8-azure/marinatemd/internal/markdown"
-	"github.com/c4a8-azure/marinatemd/internal/paths"
+	"github.com/glueckkanja/marinatemd/internal/config"
+	"github.com/glueckkanja/marinatemd/internal/logger"
+	"github.com/glueckkanja/marinatemd/internal/markdown"
+	"github.com/glueckkanja/marinatemd/internal/paths"
 	"github.com/spf13/cobra"
 )
 

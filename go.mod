@@ -1,4 +1,4 @@
-module github.com/c4a8-azure/marinatemd
+module github.com/glueckkanja/marinatemd
 
 go 1.24
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/c4a8-azure/marinatemd/internal/markdown"
+	"github.com/glueckkanja/marinatemd/internal/markdown"
 )
 
 func TestSplitter_ExtractSections(t *testing.T) {

@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Question or Discussion
-    url: https://github.com/c4a8-azure/marinatemd/discussions
+    url: https://github.com/glueckkanja/marinatemd/discussions
     about: Ask questions or discuss ideas with the community
   - name: Documentation
-    url: https://github.com/c4a8-azure/marinatemd/blob/main/README.md
+    url: https://github.com/glueckkanja/marinatemd/blob/main/README.md
     about: Read the project documentation

@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/c4a8-azure/marinatemd/internal/schema"
+	"github.com/glueckkanja/marinatemd/internal/schema"
 )
 
 // Common errors.

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/c4a8-azure/marinatemd/internal/config"
+	"github.com/glueckkanja/marinatemd/internal/config"
 	"github.com/spf13/viper"
 )
 

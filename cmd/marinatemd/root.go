@@ -3,8 +3,8 @@ package marinatemd
 import (
 	"os"
 
-	"github.com/c4a8-azure/marinatemd/internal/config"
-	"github.com/c4a8-azure/marinatemd/internal/logger"
+	"github.com/glueckkanja/marinatemd/internal/config"
+	"github.com/glueckkanja/marinatemd/internal/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

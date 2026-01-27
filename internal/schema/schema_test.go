@@ -3,8 +3,8 @@ package schema_test
 import (
 	"testing"
 
-	"github.com/c4a8-azure/marinatemd/internal/hclparse"
-	"github.com/c4a8-azure/marinatemd/internal/schema"
+	"github.com/glueckkanja/marinatemd/internal/hclparse"
+	"github.com/glueckkanja/marinatemd/internal/schema"
 )
 
 func TestBuildFromHCL_SimpleTypes(t *testing.T) {

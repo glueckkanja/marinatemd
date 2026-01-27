@@ -1,6 +1,6 @@
 package main
 
-import "github.com/c4a8-azure/marinatemd/cmd/marinatemd"
+import "github.com/glueckkanja/marinatemd/cmd/marinatemd"
 
 func main() {
 	marinatemd.Execute()

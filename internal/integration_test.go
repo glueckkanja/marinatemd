@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/c4a8-azure/marinatemd/internal/hclparse"
-	"github.com/c4a8-azure/marinatemd/internal/schema"
-	"github.com/c4a8-azure/marinatemd/internal/yamlio"
+	"github.com/glueckkanja/marinatemd/internal/hclparse"
+	"github.com/glueckkanja/marinatemd/internal/schema"
+	"github.com/glueckkanja/marinatemd/internal/yamlio"
 )
 
 func TestEndToEndPipeline(t *testing.T) {

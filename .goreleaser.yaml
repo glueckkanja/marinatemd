@@ -45,9 +45,9 @@ builds:
 
     ldflags:
       - -s -w
-      - -X github.com/c4a8-azure/marinatemd/cmd/marinatemd.version={{.Version}}
-      - -X github.com/c4a8-azure/marinatemd/cmd/marinatemd.commit={{.Commit}}
-      - -X github.com/c4a8-azure/marinatemd/cmd/marinatemd.date={{.Date}}
+      - -X github.com/glueckkanja/marinatemd/cmd/marinatemd.version={{.Version}}
+      - -X github.com/glueckkanja/marinatemd/cmd/marinatemd.commit={{.Commit}}
+      - -X github.com/glueckkanja/marinatemd/cmd/marinatemd.date={{.Date}}
 
 archives:
   - id: marinatemd-archive
@@ -100,7 +100,7 @@ changelog:
 # GitHub release configuration
 release:
   github:
-    owner: c4a8-azure
+    owner: glueckkanja
     name: marinatemd
 
   # Create a draft release for manual review
@@ -126,7 +126,7 @@ release:
 
     ### Using Go
     ```bash
-    go install github.com/c4a8-azure/marinatemd@{{.Version}}
+    go install github.com/glueckkanja/marinatemd@{{.Version}}
     ```
 
     ### Download Binary
@@ -136,10 +136,10 @@ release:
 # brews:
 #   - name: marinatemd
 #     repository:
-#       owner: c4a8-azure
+#       owner: glueckkanja
 #       name: homebrew-tap
 #     folder: Formula
-#     homepage: https://github.com/c4a8-azure/marinatemd
+#     homepage: https://github.com/glueckkanja/marinatemd
 #     description: "Terraform/OpenTofu variable documentation tool"
 #     license: MIT
 #     install: |
@@ -148,8 +148,8 @@ release:
 # Docker images (optional)
 # dockers:
 #   - image_templates:
-#       - "ghcr.io/c4a8-azure/marinatemd:{{ .Version }}"
-#       - "ghcr.io/c4a8-azure/marinatemd:latest"
+#       - "ghcr.io/glueckkanja/marinatemd:{{ .Version }}"
+#       - "ghcr.io/glueckkanja/marinatemd:latest"
 #     dockerfile: Dockerfile
 #     build_flag_templates:
 #       - "--pull"

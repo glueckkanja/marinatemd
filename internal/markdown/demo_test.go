@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/c4a8-azure/marinatemd/internal/schema"
+	"github.com/glueckkanja/marinatemd/internal/schema"
 )
 
 // TestDemo_NetworkRulesExample demonstrates rendering with the default template.

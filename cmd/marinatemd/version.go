@@ -1,7 +1,7 @@
 package marinatemd
 
 import (
-	"github.com/c4a8-azure/marinatemd/internal/logger"
+	"github.com/glueckkanja/marinatemd/internal/logger"
 	"github.com/spf13/cobra"
 )
 

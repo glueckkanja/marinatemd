@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/c4a8-azure/marinatemd/internal/config"
-	"github.com/c4a8-azure/marinatemd/internal/logger"
+	"github.com/glueckkanja/marinatemd/internal/config"
+	"github.com/glueckkanja/marinatemd/internal/logger"
 )
 
 // SetupEnvironment is a shared function that resolves the module path and loads configuration.

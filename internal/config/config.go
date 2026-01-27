@@ -1,8 +1,8 @@
 package config
 
 import (
-	"github.com/c4a8-azure/marinatemd/internal/logger"
-	"github.com/c4a8-azure/marinatemd/internal/markdown"
+	"github.com/glueckkanja/marinatemd/internal/logger"
+	"github.com/glueckkanja/marinatemd/internal/markdown"
 	"github.com/spf13/viper"
 )
 

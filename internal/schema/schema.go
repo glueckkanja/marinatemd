@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/c4a8-azure/marinatemd/internal/hclparse"
+	"github.com/glueckkanja/marinatemd/internal/hclparse"
 	"gopkg.in/yaml.v3"
 )
 

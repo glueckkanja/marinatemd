@@ -5,9 +5,9 @@ VERSION ?= dev
 COMMIT_FALLBACK := none
 COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "$(COMMIT_FALLBACK)")
 BUILD_DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-LDFLAGS := -X github.com/c4a8-azure/marinatemd/cmd/marinatemd.Version=$(VERSION) \
-           -X github.com/c4a8-azure/marinatemd/cmd/marinatemd.Commit=$(COMMIT) \
-           -X github.com/c4a8-azure/marinatemd/cmd/marinatemd.BuildDate=$(BUILD_DATE)
+LDFLAGS := -X github.com/glueckkanja/marinatemd/cmd/marinatemd.Version=$(VERSION) \
+           -X github.com/glueckkanja/marinatemd/cmd/marinatemd.Commit=$(COMMIT) \
+           -X github.com/glueckkanja/marinatemd/cmd/marinatemd.BuildDate=$(BUILD_DATE)
 
 .PHONY: all
 all: build
