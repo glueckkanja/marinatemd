@@ -48,7 +48,7 @@ func init() {
 		&splitInputFile,
 		"input",
 		"",
-		"input markdown file to split (defaults to docs/README.md)",
+		"input markdown file to split (defaults to docs_file from configuration)",
 	)
 
 	splitCmd.Flags().StringVar(
@@ -101,10 +101,21 @@ func resolveInputPath(moduleRoot string, cfg *config.Config) string {
 		exportPath := paths.ResolveExportPath(moduleRoot, cfg)
 		return filepath.Join(exportPath, cfg.Split.InputPath)
 	default:
-		// Use docs_file as default (relative to export_path)
-		exportPath := paths.ResolveExportPath(moduleRoot, cfg)
-		return filepath.Join(exportPath, cfg.DocsFile)
+		return resolveDefaultDocsFile(moduleRoot, cfg)
 	}
+}
+
+func resolveDefaultDocsFile(moduleRoot string, cfg *config.Config) string {
+	docsFile := "README.md"
+	if cfg != nil && cfg.DocsFile != "" {
+		docsFile = cfg.DocsFile
+	}
+
+	if filepath.IsAbs(docsFile) {
+		return docsFile
+	}
+
+	return filepath.Join(moduleRoot, docsFile)
 }
 
 func resolveOutputDir(moduleRoot string, cfg *config.Config) string {
