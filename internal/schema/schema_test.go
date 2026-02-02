@@ -23,6 +23,7 @@ func TestBuildFromHCL_SimpleTypes(t *testing.T) {
 			want: &schema.Schema{
 				Variable:    "app_name",
 				Version:     "1",
+				Config:      nil,
 				SchemaNodes: map[string]*schema.Node{},
 			},
 		},
@@ -242,6 +243,9 @@ func TestMergeWithExisting_PreserveDescriptions(t *testing.T) {
 	existing := &schema.Schema{
 		Variable: "app_config",
 		Version:  "1",
+		Config: &schema.VariableConfig{
+			Name: "custom-file",
+		},
 		SchemaNodes: map[string]*schema.Node{
 			"database": {
 				Marinate: &schema.MarinateInfo{
@@ -269,6 +273,9 @@ func TestMergeWithExisting_PreserveDescriptions(t *testing.T) {
 	newSchema := &schema.Schema{
 		Variable: "app_config",
 		Version:  "1",
+		Config: &schema.VariableConfig{
+			Name: "",
+		},
 		SchemaNodes: map[string]*schema.Node{
 			"database": {
 				Marinate: &schema.MarinateInfo{
@@ -505,5 +512,53 @@ func TestShowDescription_ExplicitlyShown(t *testing.T) {
 
 	if node.Marinate.Description != "This description should be shown" {
 		t.Errorf("expected description to be set, got %v", node.Marinate.Description)
+	}
+}
+
+func TestMergeVariableConfig_NewOverride(t *testing.T) {
+	existing := &schema.Schema{
+		Variable: "app_config",
+		Version:  "1",
+		Config:   &schema.VariableConfig{Name: "legacy"},
+	}
+
+	newSchema := &schema.Schema{
+		Variable: "app_config",
+		Version:  "1",
+		Config:   &schema.VariableConfig{Name: "preferred"},
+	}
+
+	builder := schema.NewBuilder()
+	merged, err := builder.MergeWithExisting(newSchema, existing)
+	if err != nil {
+		t.Fatalf("MergeWithExisting() error = %v", err)
+	}
+
+	if merged.Config == nil || merged.Config.Name != "preferred" {
+		t.Fatalf("expected config name to be overridden, got %+v", merged.Config)
+	}
+}
+
+func TestMergeVariableConfig_PreserveExistingWhenNewEmpty(t *testing.T) {
+	existing := &schema.Schema{
+		Variable: "app_config",
+		Version:  "1",
+		Config:   &schema.VariableConfig{Name: "legacy"},
+	}
+
+	newSchema := &schema.Schema{
+		Variable: "app_config",
+		Version:  "1",
+		Config:   &schema.VariableConfig{Name: ""},
+	}
+
+	builder := schema.NewBuilder()
+	merged, err := builder.MergeWithExisting(newSchema, existing)
+	if err != nil {
+		t.Fatalf("MergeWithExisting() error = %v", err)
+	}
+
+	if merged.Config == nil || merged.Config.Name != "legacy" {
+		t.Fatalf("expected config name to remain legacy, got %+v", merged.Config)
 	}
 }

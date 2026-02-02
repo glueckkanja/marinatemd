@@ -20,7 +20,13 @@ var (
 type Schema struct {
 	Variable    string           `yaml:"variable"`
 	Version     string           `yaml:"version"`
+	Config      *VariableConfig  `yaml:"config,omitempty"`
 	SchemaNodes map[string]*Node `yaml:"schema"`
+}
+
+// VariableConfig represents user-controlled settings for a variable schema.
+type VariableConfig struct {
+	Name string `yaml:"name,omitempty"`
 }
 
 // Node represents a node in the schema tree.
@@ -649,6 +655,7 @@ func (b *Builder) MergeWithExisting(newSchema, existing *Schema) (*Schema, error
 	merged := &Schema{
 		Variable:    newSchema.Variable,
 		Version:     newSchema.Version,
+		Config:      b.mergeVariableConfig(newSchema.Config, existing.Config),
 		SchemaNodes: make(map[string]*Node),
 	}
 
@@ -877,4 +884,26 @@ func splitByComma(s string) []string {
 	}
 
 	return result
+}
+
+func (b *Builder) mergeVariableConfig(newCfg, existingCfg *VariableConfig) *VariableConfig {
+	if newCfg == nil && existingCfg == nil {
+		return nil
+	}
+
+	merged := &VariableConfig{}
+
+	if existingCfg != nil && existingCfg.Name != "" {
+		merged.Name = existingCfg.Name
+	}
+
+	if newCfg != nil && newCfg.Name != "" {
+		merged.Name = newCfg.Name
+	}
+
+	if merged.Name == "" {
+		return nil
+	}
+
+	return merged
 }

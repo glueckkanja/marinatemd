@@ -18,11 +18,14 @@ type VariableSection struct {
 type Splitter struct {
 	headerContent string
 	footerContent string
+	nameOverrides map[string]string
 }
 
 // NewSplitter creates a new markdown splitter.
 func NewSplitter() *Splitter {
-	return &Splitter{}
+	return &Splitter{
+		nameOverrides: make(map[string]string),
+	}
 }
 
 // NewSplitterWithTemplate creates a new markdown splitter with header and footer templates.
@@ -56,6 +59,27 @@ func (s *Splitter) SetHeader(header string) {
 // SetFooter sets the footer content to append to each split file.
 func (s *Splitter) SetFooter(footer string) {
 	s.footerContent = footer
+}
+
+// SetNameOverride registers a custom output filename (without extension)
+// for a MARINATED variable when splitting markdown into files.
+func (s *Splitter) SetNameOverride(variable, name string) {
+	variable = strings.TrimSpace(variable)
+	name = strings.TrimSpace(name)
+	if variable == "" || name == "" {
+		return
+	}
+	if s.nameOverrides == nil {
+		s.nameOverrides = make(map[string]string)
+	}
+	s.nameOverrides[variable] = name
+}
+
+func (s *Splitter) resolveOutputName(section VariableSection) string {
+	if override, ok := s.nameOverrides[section.VariableName]; ok && override != "" {
+		return override
+	}
+	return section.VariableName
 }
 
 // ExtractSections parses a markdown file and extracts all MARINATED variable sections.
@@ -254,8 +278,7 @@ func (s *Splitter) SplitToFiles(inputPath string, outputDir string) ([]string, e
 	var createdFiles []string
 
 	for _, section := range sections {
-		// Create output filename: <variable_name>.md
-		outputFilename := fmt.Sprintf("%s.md", section.VariableName)
+		outputFilename := fmt.Sprintf("%s.md", s.resolveOutputName(section))
 		outputPath := filepath.Join(outputDir, outputFilename)
 
 		if writeErr := s.WriteSection(outputPath, section); writeErr != nil {
