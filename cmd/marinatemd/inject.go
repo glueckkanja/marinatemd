@@ -43,7 +43,7 @@ Flags:
                        - both: inject into both markdown and Terraform files
   --markdown-file      Path to the markdown file to inject into.
                        Can be absolute or relative to current working directory.
-                       Defaults to <current-dir>/README.md
+                       Defaults to docs_file from configuration (relative to module root).
                        Required when inject-type is "markdown" or "both".
   --terraform-module   Path to the Terraform module directory containing variables*.tf files.
                        Can be absolute or relative to current working directory.
@@ -105,7 +105,7 @@ func runInject(_ *cobra.Command, args []string) error {
 		return validateErr
 	}
 
-	schemaBasePath, markdownPath, terraformPath, err := resolveInjectPaths(args)
+	schemaBasePath, markdownPath, terraformPath, err := resolveInjectPaths(moduleRoot, cfg, args)
 	if err != nil {
 		return err
 	}
@@ -283,7 +283,7 @@ func processTerraformMarker(
 // resolveInjectPaths determines the schema path and markdown file path based on arguments and flags.
 // The schema path points directly to the directory containing YAML schema files.
 // Returns: (schemaPath, markdownPath, terraformPath, error).
-func resolveInjectPaths(args []string) (string, string, string, error) {
+func resolveInjectPaths(moduleRoot string, cfg *config.Config, args []string) (string, string, string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "", "", "", fmt.Errorf("failed to get current directory: %w", err)
@@ -295,7 +295,7 @@ func resolveInjectPaths(args []string) (string, string, string, error) {
 		return "", "", "", err
 	}
 
-	markdownPath := resolveMarkdownPath(cwd)
+	markdownPath := resolveMarkdownPath(cwd, moduleRoot, cfg)
 	terraformPath, err := resolveTerraformPath(cwd)
 	if err != nil {
 		return "", "", "", err
@@ -348,7 +348,7 @@ func resolveSchemaBasePath(cwd string, args []string) (string, error) {
 	return schemaPath, nil
 }
 
-func resolveMarkdownPath(cwd string) string {
+func resolveMarkdownPath(cwd, moduleRoot string, cfg *config.Config) string {
 	if injectType != injectTypeMarkdown && injectType != injectTypeBoth {
 		return ""
 	}
@@ -363,9 +363,30 @@ func resolveMarkdownPath(cwd string) string {
 		return resolved
 	}
 
-	defaultPath := filepath.Join(cwd, "README.md")
-	logger.Log.Debug("using default markdown file", "path", defaultPath)
-	return defaultPath
+	if cfg == nil {
+		defaultPath := filepath.Join(cwd, "README.md")
+		logger.Log.Debug("config not provided, using default markdown file", "path", defaultPath)
+		return defaultPath
+	}
+
+	configured := cfg.DocsFile
+	if configured == "" {
+		configured = "README.md"
+	}
+
+	if filepath.IsAbs(configured) {
+		logger.Log.Debug("using markdown file from config", "input", configured, "resolved", configured)
+		return configured
+	}
+
+	base := moduleRoot
+	if base == "" {
+		base = cwd
+	}
+
+	resolved := filepath.Join(base, configured)
+	logger.Log.Debug("using markdown file from config", "input", configured, "resolved", resolved)
+	return resolved
 }
 
 func resolveTerraformPath(cwd string) (string, error) {
