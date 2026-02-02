@@ -1,5 +1,7 @@
 variable: app_config
 version: "1"
+config:
+    name: important_resources
 schema:
     cache:
         _marinate:

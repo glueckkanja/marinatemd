@@ -1,13 +1,18 @@
 package marinatemd
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
+	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/glueckkanja/marinatemd/internal/config"
 	"github.com/glueckkanja/marinatemd/internal/logger"
 	"github.com/glueckkanja/marinatemd/internal/markdown"
 	"github.com/glueckkanja/marinatemd/internal/paths"
+	"github.com/glueckkanja/marinatemd/internal/yamlio"
 	"github.com/spf13/cobra"
 )
 
@@ -88,6 +93,10 @@ func runSplit(_ *cobra.Command, args []string) error {
 		return err
 	}
 
+	if appErr := applyConfigNameOverrides(splitter, moduleRoot, cfg); appErr != nil {
+		return appErr
+	}
+
 	return executeSplit(splitter, inputPath, outputDir, moduleRoot)
 }
 
@@ -161,15 +170,30 @@ func resolveTemplatePath(
 }
 
 func createSplitter(headerPath, footerPath string) (*markdown.Splitter, error) {
-	if headerPath != "" || footerPath != "" {
-		splitter, err := markdown.NewSplitterWithTemplate(headerPath, footerPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create splitter with templates: %w", err)
-		}
-		logger.Log.Debug("using templates", "header", headerPath, "footer", footerPath)
-		return splitter, nil
+	if headerPath == "" && footerPath == "" {
+		return markdown.NewSplitter(), nil
 	}
-	return markdown.NewSplitter(), nil
+
+	splitter := markdown.NewSplitter()
+
+	if headerPath != "" {
+		headerContent, err := os.ReadFile(headerPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read header file: %w", err)
+		}
+		splitter.SetHeader(string(headerContent))
+	}
+
+	if footerPath != "" {
+		footerContent, err := os.ReadFile(footerPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read footer file: %w", err)
+		}
+		splitter.SetFooter(string(footerContent))
+	}
+
+	logger.Log.Debug("using templates", "header", headerPath, "footer", footerPath)
+	return splitter, nil
 }
 
 func executeSplit(splitter *markdown.Splitter, inputPath, outputDir, absRoot string) error {
@@ -192,4 +216,33 @@ func printSplitSummary(createdFiles []string, absRoot string) {
 		}
 		logger.Log.Debug("created file", "path", relPath)
 	}
+}
+
+func applyConfigNameOverrides(splitter *markdown.Splitter, moduleRoot string, cfg *config.Config) error {
+	exportPath := paths.ResolveExportPath(moduleRoot, cfg)
+	reader := yamlio.NewReader(exportPath)
+
+	files, err := os.ReadDir(filepath.Join(exportPath, "variables"))
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("failed to list schema files: %w", err)
+	}
+
+	for _, entry := range files {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".yaml" {
+			continue
+		}
+
+		variable := strings.TrimSuffix(entry.Name(), ".yaml")
+		schemaFile, readErr := reader.ReadSchema(variable)
+		if readErr != nil {
+			return fmt.Errorf("failed to read schema for %s: %w", variable, readErr)
+		}
+		if schemaFile == nil || schemaFile.Config == nil || schemaFile.Config.Name == "" {
+			continue
+		}
+
+		splitter.SetNameOverride(variable, schemaFile.Config.Name)
+	}
+
+	return nil
 }
