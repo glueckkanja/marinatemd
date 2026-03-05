@@ -295,6 +295,86 @@ func TestWriter_PreserveExistingDescriptions(t *testing.T) {
 	}
 }
 
+// TestWriter_FieldNamedType tests that we can write and read a schema
+// with fields named after historically-reserved names like "type", "required", etc.
+func TestWriter_FieldNamedType(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+
+	originalSchema := &schema.Schema{
+		Variable: "resource_config",
+		Version:  "1",
+		SchemaNodes: map[string]*schema.Node{
+			"settings": {
+				Marinate: &schema.MarinateInfo{
+					Description: "Settings block",
+					Type:        "object",
+					Required:    true,
+				},
+				Attributes: map[string]*schema.Node{
+					"type": {
+						Marinate: &schema.MarinateInfo{
+							Description: "Resource type identifier",
+							Type:        "string",
+							Required:    true,
+						},
+						Attributes: map[string]*schema.Node{},
+					},
+					"required": {
+						Marinate: &schema.MarinateInfo{
+							Description: "Whether this resource is required",
+							Type:        "bool",
+							Required:    false,
+						},
+						Attributes: map[string]*schema.Node{},
+					},
+					"default": {
+						Marinate: &schema.MarinateInfo{
+							Description: "Default value for the setting",
+							Type:        "string",
+							Required:    false,
+						},
+						Attributes: map[string]*schema.Node{},
+					},
+				},
+			},
+		},
+	}
+
+	writer := yamlio.NewWriter(tmpDir)
+	if err := writer.WriteSchema(originalSchema); err != nil {
+		t.Fatalf("WriteSchema() error = %v", err)
+	}
+
+	reader := yamlio.NewReader(tmpDir)
+	readSchema, err := reader.ReadSchema("resource_config")
+	if err != nil {
+		t.Fatalf("ReadSchema() error = %v", err)
+	}
+
+	settings := readSchema.SchemaNodes["settings"]
+	if settings == nil {
+		t.Fatal("expected 'settings' node")
+	}
+
+	for _, fieldName := range []string{"type", "required", "default"} {
+		attr, ok := settings.Attributes[fieldName]
+		if !ok {
+			t.Errorf("expected attribute %q to exist after roundtrip", fieldName)
+			continue
+		}
+		if attr.Marinate == nil {
+			t.Errorf("expected _marinate on attribute %q", fieldName)
+		}
+	}
+
+	typeAttr := settings.Attributes["type"]
+	if typeAttr != nil && typeAttr.Marinate.Description != "Resource type identifier" {
+		t.Errorf("type description = %v, want 'Resource type identifier'", typeAttr.Marinate.Description)
+	}
+}
+
 // TestWriter_FieldNamedDescription tests that we can write and read
 // a schema with a field named "description" without conflicts.
 func TestWriter_FieldNamedDescription(t *testing.T) {

@@ -562,3 +562,54 @@ func TestMergeVariableConfig_PreserveExistingWhenNewEmpty(t *testing.T) {
 		t.Fatalf("expected config name to remain legacy, got %+v", merged.Config)
 	}
 }
+
+// TestBuildFromHCL_NestedMap tests that map(map(object({...}))) is fully exported.
+func TestBuildFromHCL_NestedMap(t *testing.T) {
+	t.Parallel()
+
+	variable := &hclparse.Variable{
+		Name:        "layers",
+		Type:        `map(map(object({ name = string })))`,
+		Description: "<!-- MARINATED: layers -->",
+		MarinatedID: "layers",
+	}
+
+	b := schema.NewBuilder()
+	s, err := b.BuildFromVariable(variable)
+	if err != nil {
+		t.Fatalf("BuildFromVariable() error = %v", err)
+	}
+
+	root, ok := s.SchemaNodes["_root"]
+	if !ok {
+		t.Fatal("expected '_root' node")
+	}
+	if root.Marinate.Type != "map" {
+		t.Errorf("_root type = %v, want map", root.Marinate.Type)
+	}
+	if root.Marinate.ValueType != "map" {
+		t.Errorf("_root value_type = %v, want map", root.Marinate.ValueType)
+	}
+
+	values, ok := root.Attributes["_values"]
+	if !ok {
+		t.Fatal("expected '_values' child node on _root")
+	}
+	if values.Marinate.Type != "map" {
+		t.Errorf("_values type = %v, want map", values.Marinate.Type)
+	}
+	if values.Marinate.ValueType != "object" {
+		t.Errorf("_values value_type = %v, want object", values.Marinate.ValueType)
+	}
+
+	nameField, ok := values.Attributes["name"]
+	if !ok {
+		t.Fatal("expected 'name' field in _values attributes")
+	}
+	if nameField.Marinate.Type != "string" {
+		t.Errorf("name type = %v, want string", nameField.Marinate.Type)
+	}
+	if !nameField.Marinate.Required {
+		t.Error("expected name to be required")
+	}
+}
