@@ -76,6 +76,98 @@ func TestBuildFromHCL_FieldNamedDescription(t *testing.T) {
 	}
 }
 
+// TestBuildFromHCL_FieldNamedType tests that an object field named "type" is not dropped.
+func TestBuildFromHCL_FieldNamedType(t *testing.T) {
+	t.Parallel()
+
+	variable := &hclparse.Variable{
+		Name: "resource_config",
+		Type: `object({
+			type    = string
+			enabled = optional(bool)
+		})`,
+		Description: "<!-- MARINATED: resource_config -->",
+		MarinatedID: "resource_config",
+	}
+
+	b := schema.NewBuilder()
+	s, err := b.BuildFromVariable(variable)
+	if err != nil {
+		t.Fatalf("BuildFromVariable() error = %v", err)
+	}
+
+	typeField, ok := s.SchemaNodes["type"]
+	if !ok {
+		t.Fatal("expected 'type' field in schema nodes")
+	}
+	if typeField.Marinate.Type != "string" {
+		t.Errorf("type field type = %v, want string", typeField.Marinate.Type)
+	}
+	if !typeField.Marinate.Required {
+		t.Error("expected type field to be required")
+	}
+}
+
+// TestYAMLMarshalUnmarshal_FieldNamedType tests roundtrip for a schema with a field named "type".
+func TestYAMLMarshalUnmarshal_FieldNamedType(t *testing.T) {
+	t.Parallel()
+
+	original := &schema.Schema{
+		Variable: "resource_config",
+		Version:  "1",
+		SchemaNodes: map[string]*schema.Node{
+			"type": {
+				Marinate: &schema.MarinateInfo{
+					Type:        "string",
+					Required:    true,
+					Description: "The resource type",
+				},
+				Attributes: map[string]*schema.Node{},
+			},
+			"enabled": {
+				Marinate: &schema.MarinateInfo{
+					Type:        "bool",
+					Required:    false,
+					Description: "Whether the resource is enabled",
+				},
+				Attributes: map[string]*schema.Node{},
+			},
+		},
+	}
+
+	tmpDir := t.TempDir()
+
+	writer := yamlio.NewWriter(tmpDir)
+	if err := writer.WriteSchema(original); err != nil {
+		t.Fatalf("WriteSchema() error = %v", err)
+	}
+
+	reader := yamlio.NewReader(tmpDir)
+	read, err := reader.ReadSchema("resource_config")
+	if err != nil {
+		t.Fatalf("ReadSchema() error = %v", err)
+	}
+
+	typeField, ok := read.SchemaNodes["type"]
+	if !ok {
+		t.Fatal("expected 'type' node after roundtrip")
+	}
+	if typeField.Marinate.Type != "string" {
+		t.Errorf("type = %v, want string", typeField.Marinate.Type)
+	}
+	if typeField.Marinate.Description != "The resource type" {
+		t.Errorf("description = %v, want 'The resource type'", typeField.Marinate.Description)
+	}
+
+	enabled, ok := read.SchemaNodes["enabled"]
+	if !ok {
+		t.Fatal("expected 'enabled' node after roundtrip")
+	}
+	if enabled.Marinate.Required {
+		t.Error("expected enabled to be optional")
+	}
+}
+
 // TestYAMLMarshalUnmarshal_FieldNamedDescription tests that we can
 // marshal and unmarshal a schema with a field named "description".
 func TestYAMLMarshalUnmarshal_FieldNamedDescription(t *testing.T) {

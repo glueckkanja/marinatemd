@@ -61,16 +61,6 @@ func (n *Node) UnmarshalYAML(value *yaml.Node) error {
 	// Initialize attributes map
 	n.Attributes = make(map[string]*Node)
 
-	// Known fields that are part of the Node struct
-	knownFields := map[string]bool{
-		"_marinate":    true,
-		"type":         true,
-		"required":     true,
-		"element_type": true,
-		"value_type":   true,
-		"default":      true,
-	}
-
 	// Iterate through the mapping node
 	for i := 0; i < len(value.Content); i += 2 {
 		keyNode := value.Content[i]
@@ -87,13 +77,11 @@ func (n *Node) UnmarshalYAML(value *yaml.Node) error {
 			n.Marinate = &marinate
 		default:
 			// All other fields are child attributes
-			if !knownFields[fieldName] {
-				var childNode Node
-				if err := valueNode.Decode(&childNode); err != nil {
-					return fmt.Errorf("failed to decode attribute %s: %w", fieldName, err)
-				}
-				n.Attributes[fieldName] = &childNode
+			var childNode Node
+			if err := valueNode.Decode(&childNode); err != nil {
+				return fmt.Errorf("failed to decode attribute %s: %w", fieldName, err)
 			}
+			n.Attributes[fieldName] = &childNode
 		}
 	}
 
@@ -342,6 +330,23 @@ func (b *Builder) parseMapFieldType(typeExpr string, node *Node) error {
 	if strings.HasPrefix(innerType, "object(") {
 		return b.parseNestedObjectChildren(innerType, node)
 	}
+	// If map contains another map, recurse into it via a _values child node
+	if strings.HasPrefix(innerType, "map(") {
+		return b.parseNestedMapChildren(innerType, node)
+	}
+	return nil
+}
+
+// parseNestedMapChildren creates a _values child node and recursively parses the inner map type.
+func (b *Builder) parseNestedMapChildren(mapTypeExpr string, node *Node) error {
+	valuesNode := &Node{
+		Marinate:   &MarinateInfo{},
+		Attributes: make(map[string]*Node),
+	}
+	if err := b.parseMapFieldType(mapTypeExpr, valuesNode); err != nil {
+		return err
+	}
+	node.Attributes["_values"] = valuesNode
 	return nil
 }
 
@@ -619,6 +624,13 @@ func (b *Builder) parseMapType(typeExpr string, nodes map[string]*Node, contextN
 				return parseErr5
 			}
 			node.Attributes[name] = childNode
+		}
+	}
+
+	// If map contains another map, recurse into it via a _values child node
+	if strings.HasPrefix(innerType, "map(") {
+		if err := b.parseNestedMapChildren(innerType, node); err != nil {
+			return err
 		}
 	}
 
