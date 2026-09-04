@@ -556,14 +556,16 @@ func (b *Builder) parseListType(typeExpr string, nodes map[string]*Node, context
 	node := &Node{
 		Marinate: &MarinateInfo{
 			Description: fmt.Sprintf("# TODO: Add description for %s", contextName),
-			Type:        "list",
 			Required:    true,
 		},
 		Attributes: make(map[string]*Node),
 	}
 
-	innerType := extractFunctionArg(typeExpr, "list")
-	node.Marinate.ElementType = b.simplifyType(innerType)
+	// Delegate to the field-level parser so element attributes of
+	// list(object({...})) are expanded as children, mirroring map(object).
+	if err := b.parseListFieldType(typeExpr, node); err != nil {
+		return err
+	}
 
 	nodes["_root"] = node
 	return nil
