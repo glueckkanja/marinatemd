@@ -424,7 +424,7 @@ func (b *Builder) simplifyType(typeExpr string) string {
 // parseObjectFields parses the fields of an object from its body.
 func (b *Builder) parseObjectFields(content string) (map[string]string, error) {
 	fields := make(map[string]string)
-	content = strings.TrimSpace(content)
+	content = strings.TrimSpace(stripComments(content))
 
 	if content == "" {
 		return fields, nil
@@ -528,6 +528,48 @@ func (fp *fieldParser) saveCurrentField() {
 		fp.currentValue.Reset()
 		fp.inField = false
 	}
+}
+
+// stripComments removes line comments ("#" and "//") from an object body,
+// leaving newlines intact so field boundaries are preserved.
+// Comment markers inside quoted strings (e.g. optional(string, "a#b")) are kept.
+func stripComments(content string) string {
+	var sb strings.Builder
+	inString := false
+
+	for i := 0; i < len(content); i++ {
+		ch := content[i]
+
+		if inString {
+			if ch == '\\' && i+1 < len(content) {
+				sb.WriteByte(ch)
+				i++
+				sb.WriteByte(content[i])
+				continue
+			}
+			if ch == '"' {
+				inString = false
+			}
+			sb.WriteByte(ch)
+			continue
+		}
+
+		switch {
+		case ch == '"':
+			inString = true
+			sb.WriteByte(ch)
+		case ch == '#', ch == '/' && i+1 < len(content) && content[i+1] == '/':
+			// Skip to end of line; the newline itself is kept.
+			for i < len(content) && content[i] != '\n' {
+				i++
+			}
+			i--
+		default:
+			sb.WriteByte(ch)
+		}
+	}
+
+	return sb.String()
 }
 
 // isWhitespace returns true if ch is a whitespace character.
