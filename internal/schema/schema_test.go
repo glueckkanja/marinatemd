@@ -238,6 +238,65 @@ func TestBuildFromHCL_NestedOptionalObjects(t *testing.T) {
 	}
 }
 
+func TestBuildFromHCL_CommentsInObjectType(t *testing.T) {
+	t.Parallel()
+
+	variable := &hclparse.Variable{
+		Name: "expressroute_gateway",
+		Type: `object({
+    vng_sku = string
+    # autoscaling bounds, ErGwScale sku only
+    minimum_scale_unit = optional(number)
+    // slash comment style
+    maximum_scale_unit = optional(number)
+    tag                = optional(string, "a#b") # trailing comment
+  })`,
+		Description: "<!-- MARINATED: expressroute_gateway -->",
+		MarinatedID: "expressroute_gateway",
+	}
+
+	b := schema.NewBuilder()
+	s, err := b.BuildFromVariable(variable)
+	if err != nil {
+		t.Fatalf("BuildFromVariable() error = %v", err)
+	}
+
+	vngSku, ok := s.SchemaNodes["vng_sku"]
+	if !ok {
+		t.Fatal("expected 'vng_sku' node")
+	}
+	if vngSku.Marinate.Type != "string" {
+		t.Errorf("vng_sku type = %q, want string", vngSku.Marinate.Type)
+	}
+
+	minScale, ok := s.SchemaNodes["minimum_scale_unit"]
+	if !ok {
+		t.Fatal("expected 'minimum_scale_unit' node")
+	}
+	if minScale.Marinate.Type != "number" {
+		t.Errorf("minimum_scale_unit type = %q, want number", minScale.Marinate.Type)
+	}
+
+	maxScale, ok := s.SchemaNodes["maximum_scale_unit"]
+	if !ok {
+		t.Fatal("expected 'maximum_scale_unit' node")
+	}
+	if maxScale.Marinate.Type != "number" {
+		t.Errorf("maximum_scale_unit type = %q, want number", maxScale.Marinate.Type)
+	}
+
+	tag, ok := s.SchemaNodes["tag"]
+	if !ok {
+		t.Fatal("expected 'tag' node")
+	}
+	if tag.Marinate.Type != "string" {
+		t.Errorf("tag type = %q, want string", tag.Marinate.Type)
+	}
+	if tag.Marinate.Default != "a#b" {
+		t.Errorf("tag default = %v, want a#b", tag.Marinate.Default)
+	}
+}
+
 func TestMergeWithExisting_PreserveDescriptions(t *testing.T) {
 	// Existing schema with user descriptions
 	existing := &schema.Schema{

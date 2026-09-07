@@ -16,6 +16,13 @@ var (
 	ErrNotImplemented = errors.New("not yet implemented")
 )
 
+// Collection type names used in schema metadata.
+const (
+	typeList = "list"
+	typeSet  = "set"
+	typeMap  = "map"
+)
+
 // Schema represents the internal schema model for a Terraform variable.
 type Schema struct {
 	Variable    string           `yaml:"variable"`
@@ -279,8 +286,8 @@ func (b *Builder) parseFieldType(typeExpr string, node *Node, _fieldName string)
 
 	// Handle set type
 	if strings.HasPrefix(typeExpr, "set(") {
-		node.Marinate.Type = "set"
-		innerType := extractFunctionArg(typeExpr, "set")
+		node.Marinate.Type = typeSet
+		innerType := extractFunctionArg(typeExpr, typeSet)
 		node.Marinate.ElementType = b.simplifyType(innerType)
 		return nil
 	}
@@ -311,8 +318,8 @@ func (b *Builder) parseObjectFieldType(typeExpr string, node *Node) error {
 
 // parseListFieldType parses a list type and its element type.
 func (b *Builder) parseListFieldType(typeExpr string, node *Node) error {
-	node.Marinate.Type = "list"
-	innerType := extractFunctionArg(typeExpr, "list")
+	node.Marinate.Type = typeList
+	innerType := extractFunctionArg(typeExpr, typeList)
 	node.Marinate.ElementType = b.simplifyType(innerType)
 	// If list contains objects, parse them as children
 	if strings.HasPrefix(innerType, "object(") {
@@ -323,8 +330,8 @@ func (b *Builder) parseListFieldType(typeExpr string, node *Node) error {
 
 // parseMapFieldType parses a map type and its value type.
 func (b *Builder) parseMapFieldType(typeExpr string, node *Node) error {
-	node.Marinate.Type = "map"
-	innerType := extractFunctionArg(typeExpr, "map")
+	node.Marinate.Type = typeMap
+	innerType := extractFunctionArg(typeExpr, typeMap)
 	node.Marinate.ValueType = b.simplifyType(innerType)
 	// If map contains objects, parse them as children
 	if strings.HasPrefix(innerType, "object(") {
@@ -410,13 +417,13 @@ func (b *Builder) simplifyType(typeExpr string) string {
 		return "object"
 	}
 	if strings.HasPrefix(typeExpr, "list(") {
-		return "list"
+		return typeList
 	}
 	if strings.HasPrefix(typeExpr, "set(") {
-		return "set"
+		return typeSet
 	}
 	if strings.HasPrefix(typeExpr, "map(") {
-		return "map"
+		return typeMap
 	}
 	return typeExpr
 }
@@ -424,7 +431,7 @@ func (b *Builder) simplifyType(typeExpr string) string {
 // parseObjectFields parses the fields of an object from its body.
 func (b *Builder) parseObjectFields(content string) (map[string]string, error) {
 	fields := make(map[string]string)
-	content = strings.TrimSpace(content)
+	content = strings.TrimSpace(stripComments(content))
 
 	if content == "" {
 		return fields, nil
@@ -530,6 +537,48 @@ func (fp *fieldParser) saveCurrentField() {
 	}
 }
 
+// stripComments removes line comments ("#" and "//") from an object body,
+// leaving newlines intact so field boundaries are preserved.
+// Comment markers inside quoted strings (e.g. optional(string, "a#b")) are kept.
+func stripComments(content string) string {
+	var sb strings.Builder
+	inString := false
+
+	for i := 0; i < len(content); i++ {
+		ch := content[i]
+
+		if inString {
+			if ch == '\\' && i+1 < len(content) {
+				sb.WriteByte(ch)
+				i++
+				sb.WriteByte(content[i])
+				continue
+			}
+			if ch == '"' {
+				inString = false
+			}
+			sb.WriteByte(ch)
+			continue
+		}
+
+		switch {
+		case ch == '"':
+			inString = true
+			sb.WriteByte(ch)
+		case ch == '#', ch == '/' && i+1 < len(content) && content[i+1] == '/':
+			// Skip to end of line; the newline itself is kept.
+			for i < len(content) && content[i] != '\n' {
+				i++
+			}
+			i--
+		default:
+			sb.WriteByte(ch)
+		}
+	}
+
+	return sb.String()
+}
+
 // isWhitespace returns true if ch is a whitespace character.
 func isWhitespace(ch byte) bool {
 	return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r'
@@ -574,13 +623,13 @@ func (b *Builder) parseSetType(typeExpr string, nodes map[string]*Node, contextN
 	node := &Node{
 		Marinate: &MarinateInfo{
 			Description: fmt.Sprintf("# TODO: Add description for %s", contextName),
-			Type:        "set",
+			Type:        typeSet,
 			Required:    true,
 		},
 		Attributes: make(map[string]*Node),
 	}
 
-	innerType := extractFunctionArg(typeExpr, "set")
+	innerType := extractFunctionArg(typeExpr, typeSet)
 	node.Marinate.ElementType = b.simplifyType(innerType)
 
 	nodes["_root"] = node
@@ -592,13 +641,13 @@ func (b *Builder) parseMapType(typeExpr string, nodes map[string]*Node, contextN
 	node := &Node{
 		Marinate: &MarinateInfo{
 			Description: fmt.Sprintf("# TODO: Add description for %s", contextName),
-			Type:        "map",
+			Type:        typeMap,
 			Required:    true,
 		},
 		Attributes: make(map[string]*Node),
 	}
 
-	innerType := extractFunctionArg(typeExpr, "map")
+	innerType := extractFunctionArg(typeExpr, typeMap)
 	node.Marinate.ValueType = b.simplifyType(innerType)
 
 	// If map contains objects, parse them
