@@ -172,6 +172,62 @@ func TestBuildFromHCL_MapOfObjects(t *testing.T) {
 	}
 }
 
+func TestBuildFromHCL_ListOfObjects(t *testing.T) {
+	t.Parallel()
+
+	variable := &hclparse.Variable{
+		Name: "application_rules",
+		Type: `list(object({
+    name     = string
+    priority = optional(number)
+  }))`,
+		Description: "<!-- MARINATED: application_rules -->",
+		MarinatedID: "application_rules",
+	}
+
+	b := schema.NewBuilder()
+	s, err := b.BuildFromVariable(variable)
+	if err != nil {
+		t.Fatalf("BuildFromVariable() error = %v", err)
+	}
+
+	root, ok := s.SchemaNodes["_root"]
+	if !ok {
+		t.Fatal("expected '_root' node")
+	}
+	if root.Marinate.Type != "list" {
+		t.Errorf("_root type = %v, want list", root.Marinate.Type)
+	}
+	if root.Marinate.ElementType != "object" {
+		t.Errorf("_root element_type = %v, want object", root.Marinate.ElementType)
+	}
+	if !root.Marinate.Required {
+		t.Error("expected _root to be required")
+	}
+
+	nameField, ok := root.Attributes["name"]
+	if !ok {
+		t.Fatal("expected 'name' field in _root attributes")
+	}
+	if nameField.Marinate.Type != "string" {
+		t.Errorf("name type = %v, want string", nameField.Marinate.Type)
+	}
+	if !nameField.Marinate.Required {
+		t.Error("expected name to be required")
+	}
+
+	priorityField, ok := root.Attributes["priority"]
+	if !ok {
+		t.Fatal("expected 'priority' field in _root attributes")
+	}
+	if priorityField.Marinate.Type != "number" {
+		t.Errorf("priority type = %v, want number", priorityField.Marinate.Type)
+	}
+	if priorityField.Marinate.Required {
+		t.Error("expected priority to be optional")
+	}
+}
+
 func TestBuildFromHCL_NestedOptionalObjects(t *testing.T) {
 	variable := &hclparse.Variable{
 		Name: "network_rules",
