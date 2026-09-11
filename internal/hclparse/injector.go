@@ -342,10 +342,10 @@ func convertToMultilineDescription(line, marinatedID, markdownContent string) st
 	var result strings.Builder
 	result.WriteString(indent)
 	result.WriteString("description = <<-EOT\n")
-	result.WriteString(fmt.Sprintf("<!-- MARINATED: %s -->\n\n", marinatedID))
+	fmt.Fprintf(&result, "<!-- MARINATED: %s -->\n\n", marinatedID)
 	result.WriteString(markdownContent)
 	result.WriteString("\n\n")
-	result.WriteString(fmt.Sprintf("<!-- /MARINATED: %s -->\n", marinatedID))
+	fmt.Fprintf(&result, "<!-- /MARINATED: %s -->\n", marinatedID)
 	result.WriteString(indent)
 	result.WriteString("EOT")
 

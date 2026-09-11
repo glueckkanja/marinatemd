@@ -16,11 +16,24 @@ var (
 	ErrNotImplemented = errors.New("not yet implemented")
 )
 
+// Collection type names used in schema metadata.
+const (
+	typeList = "list"
+	typeSet  = "set"
+	typeMap  = "map"
+)
+
 // Schema represents the internal schema model for a Terraform variable.
 type Schema struct {
 	Variable    string           `yaml:"variable"`
 	Version     string           `yaml:"version"`
+	Config      *VariableConfig  `yaml:"config,omitempty"`
 	SchemaNodes map[string]*Node `yaml:"schema"`
+}
+
+// VariableConfig represents user-controlled settings for a variable schema.
+type VariableConfig struct {
+	Name string `yaml:"name,omitempty"`
 }
 
 // Node represents a node in the schema tree.
@@ -55,16 +68,6 @@ func (n *Node) UnmarshalYAML(value *yaml.Node) error {
 	// Initialize attributes map
 	n.Attributes = make(map[string]*Node)
 
-	// Known fields that are part of the Node struct
-	knownFields := map[string]bool{
-		"_marinate":    true,
-		"type":         true,
-		"required":     true,
-		"element_type": true,
-		"value_type":   true,
-		"default":      true,
-	}
-
 	// Iterate through the mapping node
 	for i := 0; i < len(value.Content); i += 2 {
 		keyNode := value.Content[i]
@@ -81,13 +84,11 @@ func (n *Node) UnmarshalYAML(value *yaml.Node) error {
 			n.Marinate = &marinate
 		default:
 			// All other fields are child attributes
-			if !knownFields[fieldName] {
-				var childNode Node
-				if err := valueNode.Decode(&childNode); err != nil {
-					return fmt.Errorf("failed to decode attribute %s: %w", fieldName, err)
-				}
-				n.Attributes[fieldName] = &childNode
+			var childNode Node
+			if err := valueNode.Decode(&childNode); err != nil {
+				return fmt.Errorf("failed to decode attribute %s: %w", fieldName, err)
 			}
+			n.Attributes[fieldName] = &childNode
 		}
 	}
 
@@ -285,10 +286,7 @@ func (b *Builder) parseFieldType(typeExpr string, node *Node, _fieldName string)
 
 	// Handle set type
 	if strings.HasPrefix(typeExpr, "set(") {
-		node.Marinate.Type = "set"
-		innerType := extractFunctionArg(typeExpr, "set")
-		node.Marinate.ElementType = b.simplifyType(innerType)
-		return nil
+		return b.parseSetFieldType(typeExpr, node)
 	}
 
 	// Handle map type
@@ -317,8 +315,8 @@ func (b *Builder) parseObjectFieldType(typeExpr string, node *Node) error {
 
 // parseListFieldType parses a list type and its element type.
 func (b *Builder) parseListFieldType(typeExpr string, node *Node) error {
-	node.Marinate.Type = "list"
-	innerType := extractFunctionArg(typeExpr, "list")
+	node.Marinate.Type = typeList
+	innerType := extractFunctionArg(typeExpr, typeList)
 	node.Marinate.ElementType = b.simplifyType(innerType)
 	// If list contains objects, parse them as children
 	if strings.HasPrefix(innerType, "object(") {
@@ -327,15 +325,44 @@ func (b *Builder) parseListFieldType(typeExpr string, node *Node) error {
 	return nil
 }
 
+// parseSetFieldType parses a set type and its element type.
+func (b *Builder) parseSetFieldType(typeExpr string, node *Node) error {
+	node.Marinate.Type = typeSet
+	innerType := extractFunctionArg(typeExpr, typeSet)
+	node.Marinate.ElementType = b.simplifyType(innerType)
+	// If set contains objects, parse them as children
+	if strings.HasPrefix(innerType, "object(") {
+		return b.parseNestedObjectChildren(innerType, node)
+	}
+	return nil
+}
+
 // parseMapFieldType parses a map type and its value type.
 func (b *Builder) parseMapFieldType(typeExpr string, node *Node) error {
-	node.Marinate.Type = "map"
-	innerType := extractFunctionArg(typeExpr, "map")
+	node.Marinate.Type = typeMap
+	innerType := extractFunctionArg(typeExpr, typeMap)
 	node.Marinate.ValueType = b.simplifyType(innerType)
 	// If map contains objects, parse them as children
 	if strings.HasPrefix(innerType, "object(") {
 		return b.parseNestedObjectChildren(innerType, node)
 	}
+	// If map contains another map, recurse into it via a _values child node
+	if strings.HasPrefix(innerType, "map(") {
+		return b.parseNestedMapChildren(innerType, node)
+	}
+	return nil
+}
+
+// parseNestedMapChildren creates a _values child node and recursively parses the inner map type.
+func (b *Builder) parseNestedMapChildren(mapTypeExpr string, node *Node) error {
+	valuesNode := &Node{
+		Marinate:   &MarinateInfo{},
+		Attributes: make(map[string]*Node),
+	}
+	if err := b.parseMapFieldType(mapTypeExpr, valuesNode); err != nil {
+		return err
+	}
+	node.Attributes["_values"] = valuesNode
 	return nil
 }
 
@@ -399,13 +426,13 @@ func (b *Builder) simplifyType(typeExpr string) string {
 		return "object"
 	}
 	if strings.HasPrefix(typeExpr, "list(") {
-		return "list"
+		return typeList
 	}
 	if strings.HasPrefix(typeExpr, "set(") {
-		return "set"
+		return typeSet
 	}
 	if strings.HasPrefix(typeExpr, "map(") {
-		return "map"
+		return typeMap
 	}
 	return typeExpr
 }
@@ -545,14 +572,16 @@ func (b *Builder) parseListType(typeExpr string, nodes map[string]*Node, context
 	node := &Node{
 		Marinate: &MarinateInfo{
 			Description: fmt.Sprintf("# TODO: Add description for %s", contextName),
-			Type:        "list",
 			Required:    true,
 		},
 		Attributes: make(map[string]*Node),
 	}
 
-	innerType := extractFunctionArg(typeExpr, "list")
-	node.Marinate.ElementType = b.simplifyType(innerType)
+	// Delegate to the field-level parser so element attributes of
+	// list(object({...})) are expanded as children, mirroring map(object).
+	if err := b.parseListFieldType(typeExpr, node); err != nil {
+		return err
+	}
 
 	nodes["_root"] = node
 	return nil
@@ -563,14 +592,16 @@ func (b *Builder) parseSetType(typeExpr string, nodes map[string]*Node, contextN
 	node := &Node{
 		Marinate: &MarinateInfo{
 			Description: fmt.Sprintf("# TODO: Add description for %s", contextName),
-			Type:        "set",
 			Required:    true,
 		},
 		Attributes: make(map[string]*Node),
 	}
 
-	innerType := extractFunctionArg(typeExpr, "set")
-	node.Marinate.ElementType = b.simplifyType(innerType)
+	// Delegate to the field-level parser so element attributes of
+	// set(object({...})) are expanded as children, mirroring list/map(object).
+	if err := b.parseSetFieldType(typeExpr, node); err != nil {
+		return err
+	}
 
 	nodes["_root"] = node
 	return nil
@@ -581,13 +612,13 @@ func (b *Builder) parseMapType(typeExpr string, nodes map[string]*Node, contextN
 	node := &Node{
 		Marinate: &MarinateInfo{
 			Description: fmt.Sprintf("# TODO: Add description for %s", contextName),
-			Type:        "map",
+			Type:        typeMap,
 			Required:    true,
 		},
 		Attributes: make(map[string]*Node),
 	}
 
-	innerType := extractFunctionArg(typeExpr, "map")
+	innerType := extractFunctionArg(typeExpr, typeMap)
 	node.Marinate.ValueType = b.simplifyType(innerType)
 
 	// If map contains objects, parse them
@@ -613,6 +644,13 @@ func (b *Builder) parseMapType(typeExpr string, nodes map[string]*Node, contextN
 				return parseErr5
 			}
 			node.Attributes[name] = childNode
+		}
+	}
+
+	// If map contains another map, recurse into it via a _values child node
+	if strings.HasPrefix(innerType, "map(") {
+		if err := b.parseNestedMapChildren(innerType, node); err != nil {
+			return err
 		}
 	}
 
@@ -649,6 +687,7 @@ func (b *Builder) MergeWithExisting(newSchema, existing *Schema) (*Schema, error
 	merged := &Schema{
 		Variable:    newSchema.Variable,
 		Version:     newSchema.Version,
+		Config:      b.mergeVariableConfig(newSchema.Config, existing.Config),
 		SchemaNodes: make(map[string]*Node),
 	}
 
@@ -877,4 +916,26 @@ func splitByComma(s string) []string {
 	}
 
 	return result
+}
+
+func (b *Builder) mergeVariableConfig(newCfg, existingCfg *VariableConfig) *VariableConfig {
+	if newCfg == nil && existingCfg == nil {
+		return nil
+	}
+
+	merged := &VariableConfig{}
+
+	if existingCfg != nil && existingCfg.Name != "" {
+		merged.Name = existingCfg.Name
+	}
+
+	if newCfg != nil && newCfg.Name != "" {
+		merged.Name = newCfg.Name
+	}
+
+	if merged.Name == "" {
+		return nil
+	}
+
+	return merged
 }

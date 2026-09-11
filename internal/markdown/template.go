@@ -11,6 +11,12 @@ import (
 const (
 	// DefaultIndentSize is the default number of spaces per indent level.
 	DefaultIndentSize = 2
+
+	// escapeModeInlineCode is the default escape mode (wraps values in backticks).
+	escapeModeInlineCode = "inline_code"
+
+	// indentStyleBullets is the default indent style.
+	indentStyleBullets = "bullets"
 )
 
 // TemplateConfig defines how markdown is generated from schema fields.
@@ -66,8 +72,8 @@ func DefaultTemplateConfig() *TemplateConfig {
 		AttributeTemplate: "{{.Attribute}} - ({{.Required}}) {{.Description}}",
 		RequiredText:      "Required",
 		OptionalText:      "Optional",
-		EscapeMode:        "inline_code",
-		IndentStyle:       "bullets",
+		EscapeMode:        escapeModeInlineCode,
+		IndentStyle:       indentStyleBullets,
 		IndentSize:        DefaultIndentSize,
 		SeparatorIndents:  []int{}, // No separators by default
 	}
@@ -187,7 +193,7 @@ func (tc *TemplateConfig) renderLegacy(ctx TemplateContext) string {
 // escape applies the configured escape mode to a string.
 func (tc *TemplateConfig) escape(s string) string {
 	switch tc.EscapeMode {
-	case "inline_code":
+	case escapeModeInlineCode:
 		return fmt.Sprintf("`%s`", s)
 	case "bold":
 		return fmt.Sprintf("**%s**", s)
@@ -202,7 +208,7 @@ func (tc *TemplateConfig) escape(s string) string {
 
 // FormatIndent returns the appropriate indentation string for a given depth.
 func (tc *TemplateConfig) FormatIndent(depth int) string {
-	if tc.IndentStyle == "bullets" {
+	if tc.IndentStyle == indentStyleBullets {
 		return strings.Repeat("  ", depth) + "- "
 	}
 	// For "spaces" style
@@ -226,10 +232,10 @@ func (tc *TemplateConfig) Validate() error {
 
 	// Validate escape mode
 	validEscapeModes := map[string]bool{
-		"inline_code": true,
-		"none":        true,
-		"bold":        true,
-		"italic":      true,
+		escapeModeInlineCode: true,
+		"none":               true,
+		"bold":               true,
+		"italic":             true,
 	}
 	if !validEscapeModes[tc.EscapeMode] {
 		return fmt.Errorf("invalid escape_mode: %s (valid options: inline_code, none, bold, italic)", tc.EscapeMode)
@@ -237,8 +243,8 @@ func (tc *TemplateConfig) Validate() error {
 
 	// Validate indent style
 	validIndentStyles := map[string]bool{
-		"bullets": true,
-		"spaces":  true,
+		indentStyleBullets: true,
+		"spaces":           true,
 	}
 	if !validIndentStyles[tc.IndentStyle] {
 		return fmt.Errorf("invalid indent_style: %s (valid options: bullets, spaces)", tc.IndentStyle)

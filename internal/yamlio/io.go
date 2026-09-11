@@ -9,6 +9,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const yamlIndentSize = 2
+
 // Reader handles reading YAML schema files from disk.
 type Reader struct {
 	exportPath string // Base path for export/variables/ directory
@@ -89,16 +91,18 @@ func (w *Writer) WriteSchema(s *schema.Schema) error {
 		return fmt.Errorf("failed to create variables directory: %w", err)
 	}
 
-	// Marshal schema to YAML
-	yamlBytes, err := yaml.Marshal(s)
-	if err != nil {
-		return fmt.Errorf("failed to marshal schema to YAML: %w", err)
-	}
-
 	// Write to file: {exportPath}/variables/{schema.Variable}.yaml
 	yamlPath := filepath.Join(varDir, s.Variable+".yaml")
-	if writeErr := os.WriteFile(yamlPath, yamlBytes, 0600); writeErr != nil {
-		return fmt.Errorf("failed to write YAML file %s: %w", yamlPath, writeErr)
+	file, err := os.OpenFile(yamlPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return fmt.Errorf("failed to open YAML file %s for writing: %w", yamlPath, err)
+	}
+	defer file.Close()
+
+	encoder := yaml.NewEncoder(file)
+	encoder.SetIndent(yamlIndentSize)
+	if err = encoder.Encode(s); err != nil {
+		return fmt.Errorf("failed to encode schema to YAML file %s: %w", yamlPath, err)
 	}
 
 	return nil

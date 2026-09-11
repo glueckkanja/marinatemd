@@ -440,6 +440,58 @@ Type: object({})
 	}
 }
 
+// Ensure custom filename overrides are applied when splitting output files.
+func TestSplitter_SplitToFiles_WithOverrides(t *testing.T) {
+	tmpDir := t.TempDir()
+	inputFile := filepath.Join(tmpDir, "input.md")
+	outputDir := filepath.Join(tmpDir, "output")
+
+	content := `# Documentation
+
+## Inputs
+
+### app_config
+
+Description: <!-- MARINATED: app_config -->
+- database - Database settings
+<!-- /MARINATED: app_config -->
+
+Type: object({})
+
+### storage_config
+
+Description: <!-- MARINATED: storage_config -->
+- bucket - Storage bucket name
+<!-- /MARINATED: storage_config -->
+
+Type: object({})
+`
+
+	if err := os.WriteFile(inputFile, []byte(content), 0600); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	splitter := markdown.NewSplitter()
+	splitter.SetNameOverride("app_config", "custom_app")
+
+	createdFiles, err := splitter.SplitToFiles(inputFile, outputDir)
+	if err != nil {
+		t.Fatalf("SplitToFiles() error = %v", err)
+	}
+
+	if len(createdFiles) != 2 {
+		t.Errorf("SplitToFiles() created %d files, want 2", len(createdFiles))
+	}
+
+	if _, statErr := os.Stat(filepath.Join(outputDir, "custom_app.md")); statErr != nil {
+		t.Fatalf("expected custom_app.md to be created: %v", statErr)
+	}
+
+	if _, statErr := os.Stat(filepath.Join(outputDir, "storage_config.md")); statErr != nil {
+		t.Fatalf("expected storage_config.md to be created: %v", statErr)
+	}
+}
+
 func TestSplitter_NewSplitterWithTemplate(t *testing.T) {
 	tmpDir := t.TempDir()
 	headerFile := filepath.Join(tmpDir, "header.md")
