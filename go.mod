@@ -1,13 +1,13 @@
 module github.com/glueckkanja/marinatemd
 
-go 1.24
+go 1.25
 
 require (
 	github.com/charmbracelet/log v0.4.2
 	github.com/hashicorp/hcl/v2 v2.24.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
-	github.com/zclconf/go-cty v1.17.0
+	github.com/zclconf/go-cty v1.18.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
