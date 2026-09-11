@@ -172,6 +172,62 @@ func TestBuildFromHCL_MapOfObjects(t *testing.T) {
 	}
 }
 
+func TestBuildFromHCL_ListOfObjects(t *testing.T) {
+	t.Parallel()
+
+	variable := &hclparse.Variable{
+		Name: "application_rules",
+		Type: `list(object({
+    name     = string
+    priority = optional(number)
+  }))`,
+		Description: "<!-- MARINATED: application_rules -->",
+		MarinatedID: "application_rules",
+	}
+
+	b := schema.NewBuilder()
+	s, err := b.BuildFromVariable(variable)
+	if err != nil {
+		t.Fatalf("BuildFromVariable() error = %v", err)
+	}
+
+	root, ok := s.SchemaNodes["_root"]
+	if !ok {
+		t.Fatal("expected '_root' node")
+	}
+	if root.Marinate.Type != "list" {
+		t.Errorf("_root type = %v, want list", root.Marinate.Type)
+	}
+	if root.Marinate.ElementType != "object" {
+		t.Errorf("_root element_type = %v, want object", root.Marinate.ElementType)
+	}
+	if !root.Marinate.Required {
+		t.Error("expected _root to be required")
+	}
+
+	nameField, ok := root.Attributes["name"]
+	if !ok {
+		t.Fatal("expected 'name' field in _root attributes")
+	}
+	if nameField.Marinate.Type != "string" {
+		t.Errorf("name type = %v, want string", nameField.Marinate.Type)
+	}
+	if !nameField.Marinate.Required {
+		t.Error("expected name to be required")
+	}
+
+	priorityField, ok := root.Attributes["priority"]
+	if !ok {
+		t.Fatal("expected 'priority' field in _root attributes")
+	}
+	if priorityField.Marinate.Type != "number" {
+		t.Errorf("priority type = %v, want number", priorityField.Marinate.Type)
+	}
+	if priorityField.Marinate.Required {
+		t.Error("expected priority to be optional")
+	}
+}
+
 func TestBuildFromHCL_NestedOptionalObjects(t *testing.T) {
 	variable := &hclparse.Variable{
 		Name: "network_rules",
@@ -235,6 +291,65 @@ func TestBuildFromHCL_NestedOptionalObjects(t *testing.T) {
 	}
 	if eti.Marinate.Type != "string" {
 		t.Errorf("expected type 'string', got %v", eti.Marinate.Type)
+	}
+}
+
+func TestBuildFromHCL_CommentsInObjectType(t *testing.T) {
+	t.Parallel()
+
+	variable := &hclparse.Variable{
+		Name: "expressroute_gateway",
+		Type: `object({
+    vng_sku = string
+    # autoscaling bounds, ErGwScale sku only
+    minimum_scale_unit = optional(number)
+    // slash comment style
+    maximum_scale_unit = optional(number)
+    tag                = optional(string, "a#b") # trailing comment
+  })`,
+		Description: "<!-- MARINATED: expressroute_gateway -->",
+		MarinatedID: "expressroute_gateway",
+	}
+
+	b := schema.NewBuilder()
+	s, err := b.BuildFromVariable(variable)
+	if err != nil {
+		t.Fatalf("BuildFromVariable() error = %v", err)
+	}
+
+	vngSku, ok := s.SchemaNodes["vng_sku"]
+	if !ok {
+		t.Fatal("expected 'vng_sku' node")
+	}
+	if vngSku.Marinate.Type != "string" {
+		t.Errorf("vng_sku type = %q, want string", vngSku.Marinate.Type)
+	}
+
+	minScale, ok := s.SchemaNodes["minimum_scale_unit"]
+	if !ok {
+		t.Fatal("expected 'minimum_scale_unit' node")
+	}
+	if minScale.Marinate.Type != "number" {
+		t.Errorf("minimum_scale_unit type = %q, want number", minScale.Marinate.Type)
+	}
+
+	maxScale, ok := s.SchemaNodes["maximum_scale_unit"]
+	if !ok {
+		t.Fatal("expected 'maximum_scale_unit' node")
+	}
+	if maxScale.Marinate.Type != "number" {
+		t.Errorf("maximum_scale_unit type = %q, want number", maxScale.Marinate.Type)
+	}
+
+	tag, ok := s.SchemaNodes["tag"]
+	if !ok {
+		t.Fatal("expected 'tag' node")
+	}
+	if tag.Marinate.Type != "string" {
+		t.Errorf("tag type = %q, want string", tag.Marinate.Type)
+	}
+	if tag.Marinate.Default != "a#b" {
+		t.Errorf("tag default = %v, want a#b", tag.Marinate.Default)
 	}
 }
 
@@ -611,5 +726,129 @@ func TestBuildFromHCL_NestedMap(t *testing.T) {
 	}
 	if !nameField.Marinate.Required {
 		t.Error("expected name to be required")
+	}
+}
+
+// TestBuildFromHCL_SetOfObjects tests that a top-level set(object({...}))
+// exports its element attributes, the same way list and map already do.
+func TestBuildFromHCL_SetOfObjects(t *testing.T) {
+	t.Parallel()
+
+	variable := &hclparse.Variable{
+		Name:        "endpoints",
+		Type:        "set(object({\n  host = string\n  port = optional(number)\n}))",
+		Description: "<!-- MARINATED: endpoints -->",
+		MarinatedID: "endpoints",
+	}
+
+	s, err := schema.NewBuilder().BuildFromVariable(variable)
+	if err != nil {
+		t.Fatalf("BuildFromVariable() error = %v", err)
+	}
+	root, ok := s.SchemaNodes["_root"]
+	if !ok {
+		t.Fatal("expected '_root' node")
+	}
+	if root.Marinate.Type != "set" {
+		t.Errorf("_root type = %v, want set", root.Marinate.Type)
+	}
+	if root.Marinate.ElementType != "object" {
+		t.Errorf("_root element_type = %v, want object", root.Marinate.ElementType)
+	}
+	host, hasHost := root.Attributes["host"]
+	if !hasHost {
+		t.Fatal("expected 'host' in _root attributes")
+	}
+	if host.Marinate.Type != "string" || !host.Marinate.Required {
+		t.Errorf("host = %+v, want required string", host.Marinate)
+	}
+	if _, hasPort := root.Attributes["port"]; !hasPort {
+		t.Error("expected 'port' in _root attributes")
+	}
+}
+
+// TestBuildFromHCL_NestedSetOfObjects tests the same for a set nested inside an
+// object variable, which goes through the field-level parser.
+func TestBuildFromHCL_NestedSetOfObjects(t *testing.T) {
+	t.Parallel()
+
+	variable := &hclparse.Variable{
+		Name:        "cfg",
+		Type:        "object({\n  targets = set(object({\n    host = string\n  }))\n})",
+		Description: "<!-- MARINATED: cfg -->",
+		MarinatedID: "cfg",
+	}
+
+	s, err := schema.NewBuilder().BuildFromVariable(variable)
+	if err != nil {
+		t.Fatalf("BuildFromVariable() error = %v", err)
+	}
+	targets, hasTargets := s.SchemaNodes["targets"]
+	if !hasTargets {
+		t.Fatal("expected 'targets' node")
+	}
+	if targets.Marinate.Type != "set" {
+		t.Errorf("targets type = %v, want set", targets.Marinate.Type)
+	}
+	if _, ok := targets.Attributes["host"]; !ok {
+		t.Error("expected 'host' under targets")
+	}
+}
+
+// TestBuildFromHCL_CommaSeparatedFields tests that object fields written on one
+// line and separated by commas are all exported, not just the first.
+func TestBuildFromHCL_CommaSeparatedFields(t *testing.T) {
+	t.Parallel()
+
+	variable := &hclparse.Variable{
+		Name:        "settings",
+		Type:        `object({ a = string, b = optional(number), c = optional(list(string)) })`,
+		Description: "<!-- MARINATED: settings -->",
+		MarinatedID: "settings",
+	}
+
+	s, err := schema.NewBuilder().BuildFromVariable(variable)
+	if err != nil {
+		t.Fatalf("BuildFromVariable() error = %v", err)
+	}
+	for _, name := range []string{"a", "b", "c"} {
+		if _, present := s.SchemaNodes[name]; !present {
+			t.Errorf("expected field %q to be exported", name)
+		}
+	}
+	if got := s.SchemaNodes["a"].Marinate.Type; got != "string" {
+		t.Errorf("a type = %q, want string", got)
+	}
+	if got := s.SchemaNodes["c"].Marinate.ElementType; got != "string" {
+		t.Errorf("c element_type = %q, want string", got)
+	}
+}
+
+// TestBuildFromHCL_CommaWithInlineComment tests a comma-separated body that also
+// carries a comment: the comment stripper and the comma split must not undo each
+// other, and a comma inside a quoted default must not split the field.
+func TestBuildFromHCL_CommaWithInlineComment(t *testing.T) {
+	t.Parallel()
+
+	variable := &hclparse.Variable{
+		Name:        "mixed",
+		Type:        "object({ a = string, # first\n  b = optional(string, \"x,y\") })",
+		Description: "<!-- MARINATED: mixed -->",
+		MarinatedID: "mixed",
+	}
+
+	s, err := schema.NewBuilder().BuildFromVariable(variable)
+	if err != nil {
+		t.Fatalf("BuildFromVariable() error = %v", err)
+	}
+	if _, present := s.SchemaNodes["a"]; !present {
+		t.Error("expected field \"a\"")
+	}
+	b, present := s.SchemaNodes["b"]
+	if !present {
+		t.Fatal("expected field \"b\"")
+	}
+	if b.Marinate.Default != "x,y" {
+		t.Errorf("b default = %v, want x,y - a comma inside a string must not split the field", b.Marinate.Default)
 	}
 }
