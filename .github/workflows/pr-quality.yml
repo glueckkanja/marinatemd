@@ -11,10 +11,11 @@ on:
       - develop
 
 permissions:
-  actions: read
   contents: read
-  pull-requests: read
-  security-events: write
+
+concurrency:
+  group: pr-quality
+  cancel-in-progress: false
 
 jobs:
   lint:
@@ -136,6 +137,8 @@ jobs:
   security:
     name: Security Scan
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write # Required for uploading SARIF files to GitHub Advanced Security
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

@@ -5,14 +5,19 @@ on:
     tags:
       - '*'
 
-permissions:
-  contents: write
-  packages: write
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
     name: Release with GoReleaser
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # to upload release assets
+      packages: write # to upload packages to GitHub Packages
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
