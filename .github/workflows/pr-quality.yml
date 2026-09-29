@@ -138,6 +138,7 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       security-events: write # Required for uploading SARIF files to GitHub Advanced Security
     steps:
       - name: Checkout code
